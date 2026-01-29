@@ -130,23 +130,27 @@ export interface TelemetryData {
   status: 'flying' | 'idling' | 'returning';
 }
 
-export type CustomerSource = 'WECHAT' | 'DOUYIN' | 'ALIPAY';
+export type CustomerSource = 'WECHAT' | 'DOUYIN' | 'ALIPAY' | 'MINIAPP';
 
 export interface Customer {
   id: number;
+  userId: string;
   customerNo: string;
-  phoneNumber: string;
-  openid: string;
-  source: CustomerSource;
-  nickname: string;
+  phone: string;
+  phoneNumber?: string;
+  nickname?: string;
   avatarUrl?: string;
+  source: CustomerSource;
+  loginType?: string;
+  lastLoginTime?: string;
+  lastLoginIp?: string;
+  registerIp?: string;
+  status: number; // 0: 正常, 1: 禁用
+  totalOrders: number;
+  totalSpent?: number;
+  registerTime: string;
   createTime: string;
   updateTime: string;
-  // 以下是前端扩展字段，如果后端没有，联调时可能需要 mock 或由后端后续增加
-  totalOrders?: number;
-  totalSpent?: number;
-  lastLogin?: string;
-  status?: 'active' | 'blacklisted';
 }
 
 export interface DashboardStats {

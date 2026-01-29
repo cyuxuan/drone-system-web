@@ -96,26 +96,24 @@ const AuditLogs = () => {
         </div>
       </div>
 
-      <div className="relative min-h-[400px]">
-        <div className="glass-hud border-brand-500/10 relative overflow-hidden rounded-[3.5rem] border shadow-2xl">
-          <AuditLogTable
-            logs={filteredLogs}
-            loading={loading && isFirstLoad}
-            hasError={!!errorType}
-            errorType={errorType || undefined}
-            onRetry={() => fetchLogs()}
-            paginationConfig={{
-              enabled: true,
-              currentPage: currentPage,
-              pageSize: pageSize,
-              totalItems: total,
-              onPageChange: setCurrentPage,
-              onPageSizeChange: setPageSize,
-              showPageSizeChanger: true,
-            }}
-            t={t}
-          />
-        </div>
+      <div className="relative min-h-[400px] min-w-0">
+        <AuditLogTable
+          logs={filteredLogs}
+          loading={loading && isFirstLoad}
+          hasError={!!errorType}
+          errorType={errorType || undefined}
+          onRetry={() => fetchLogs()}
+          paginationConfig={{
+            enabled: true,
+            currentPage: currentPage,
+            pageSize: pageSize,
+            totalItems: total,
+            onPageChange: setCurrentPage,
+            onPageSizeChange: setPageSize,
+            showPageSizeChanger: true,
+          }}
+          t={t}
+        />
       </div>
     </div>
   );

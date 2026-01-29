@@ -183,19 +183,21 @@ const ProjectCategory = () => {
           <div className="bg-brand-500/5 border-brand-500/10 flex items-center gap-1.5 rounded-2xl border p-1.5 shadow-inner">
             <button
               onClick={() => setViewMode('grid')}
-              className={`rounded-xl p-2.5 transition-all ${viewMode === 'grid'
+              className={`rounded-xl p-2.5 transition-all ${
+                viewMode === 'grid'
                   ? 'bg-brand-500 text-white shadow-lg'
                   : 'hover:text-brand-600 text-slate-400 dark:text-slate-500'
-                }`}
+              }`}
             >
               <LayoutGrid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`rounded-xl p-2.5 transition-all ${viewMode === 'table'
+              className={`rounded-xl p-2.5 transition-all ${
+                viewMode === 'table'
                   ? 'bg-brand-500 text-white shadow-lg'
                   : 'hover:text-brand-600 text-slate-400 dark:text-slate-500'
-                }`}
+              }`}
             >
               <List className="h-4 w-4" />
             </button>

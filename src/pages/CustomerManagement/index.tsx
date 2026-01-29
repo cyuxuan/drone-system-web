@@ -21,8 +21,8 @@ const CustomerManagement = () => {
     setRefreshKey((prev) => prev + 1);
   }, []);
 
-  const handleToggleStatus = async (id: string, currentStatus: 'active' | 'blacklisted') => {
-    const newStatus = currentStatus === 'active' ? 'blacklisted' : 'active';
+  const handleToggleStatus = async (id: string, currentStatus: number) => {
+    const newStatus = currentStatus === 0 ? 1 : 0;
     try {
       await api.updateCustomerStatus(id, newStatus);
       handleRefresh();

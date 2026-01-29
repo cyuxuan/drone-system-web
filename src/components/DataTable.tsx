@@ -205,11 +205,7 @@ const DataTable = <T,>({
     // If parent provides onPageChange callback, treat as server-side pagination
     // This allows parent to control page changes and fetch new data accordingly
     return !!paginationConfig?.onPageChange;
-  }, [
-    isFetching,
-    paginationConfig?.mode,
-    paginationConfig?.onPageChange,
-  ]);
+  }, [isFetching, paginationConfig?.mode, paginationConfig?.onPageChange]);
 
   const currentPage = isServerSide
     ? isFetching
@@ -340,9 +336,9 @@ const DataTable = <T,>({
 
   return (
     <div
-      className={`glass-hud rounded-5xl border-brand-500/10 relative overflow-hidden border shadow-2xl ${className}`}
+      className={`glass-hud rounded-5xl border-brand-500/10 relative w-full min-w-0 overflow-hidden border shadow-2xl ${className}`}
     >
-      <div className="custom-scrollbar overflow-x-auto">
+      <div className="custom-scrollbar w-full min-w-0 overflow-x-auto">
         <table className={`w-full min-w-max border-collapse text-left ${tableClassName}`}>
           <thead>
             <tr className="bg-brand-500/5 border-brand-500/10 h-16.25 border-b dark:bg-slate-900/50">
@@ -353,12 +349,7 @@ const DataTable = <T,>({
                   style={{ width: col.width }}
                 >
                   <div
-                    className={`flex h-full items-center ${col.align === 'center'
-                        ? 'justify-center'
-                        : col.align === 'right'
-                          ? 'justify-end'
-                          : ''
-                      }`}
+                    className={`flex h-full items-center ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : ''}`}
                   >
                     {col.header}
                   </div>
@@ -512,18 +503,13 @@ const DataTable = <T,>({
                           style={{ width: col.width }}
                         >
                           <div
-                            className={`flex h-full items-center ${col.align === 'center'
-                                ? 'justify-center'
-                                : col.align === 'right'
-                                  ? 'justify-end'
-                                  : ''
-                              }`}
+                            className={`flex h-full items-center ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : ''}`}
                           >
                             {col.render
                               ? col.render(item, index)
                               : ((item as Record<string, unknown>)[
-                                col.key || ''
-                              ] as React.ReactNode)}
+                                  col.key || ''
+                                ] as React.ReactNode)}
                           </div>
                         </td>
                       ))}

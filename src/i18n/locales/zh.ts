@@ -19,6 +19,9 @@ export const zh = {
   customerInfoSource: '客户身份 / 来源',
   contactId: '联系方式 / ID',
   businessOverview: '业务概览 (单量/消费)',
+  registerTime: '注册时间',
+  loginActivity: '最近登录',
+  never: '从未',
   lastActive: '最后活跃',
   actionMatrix: '操作矩阵',
 

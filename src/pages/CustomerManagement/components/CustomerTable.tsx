@@ -9,6 +9,9 @@ import {
   Calendar,
   Phone,
   Users,
+  Fingerprint,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 import { Customer, CustomerSource } from '../../../types';
 
@@ -27,7 +30,7 @@ interface CustomerTableProps {
   onSelectAll: () => void;
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  onToggleStatus: (id: string, currentStatus: 'active' | 'blacklisted') => void;
+  onToggleStatus: (id: string, currentStatus: number) => void;
   paginationConfig?: PaginationConfig;
 }
 
@@ -55,8 +58,17 @@ const SourceBadge = ({ source }: { source: CustomerSource }) => {
       border: 'border-blue-500/20',
       label: t('alipayMP'),
     },
+    MINIAPP: {
+      // 兼容新数据结构中的 MINIAPP
+      icon: MessageCircle,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/20',
+      label: t('wechatMP'),
+    },
   };
-  const { icon: Icon, color, bg, border, label } = configs[source];
+  const config = configs[source] || configs.WECHAT;
+  const { icon: Icon, color, bg, border, label } = config;
   return (
     <div
       className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 ${bg} ${border} ${color}`}
@@ -90,7 +102,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
         header: t('nickname'),
         className: 'pl-4',
         render: (customer: Customer) => {
-          const isBlacklisted = customer.status === 'blacklisted';
+          const isDisabled = customer.status === 1;
           return (
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -100,10 +112,10 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${customer.customerNo}`
                   }
                   alt={customer.nickname}
-                  className={`h-12 w-12 rounded-2xl border-2 object-cover ${isBlacklisted ? 'border-cinnabar-500/50' : 'border-brand-500/20'}`}
+                  className={`h-12 w-12 rounded-2xl border-2 object-cover ${isDisabled ? 'border-cinnabar-500/50' : 'border-brand-500/20'}`}
                 />
                 <div
-                  className={`absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 border-white dark:border-slate-950 ${isBlacklisted ? 'bg-cinnabar-500' : 'bg-emerald-500'}`}
+                  className={`absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 border-white dark:border-slate-950 ${isDisabled ? 'bg-cinnabar-500' : 'bg-emerald-500'}`}
                 />
               </div>
               <div>
@@ -111,7 +123,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                   <span className="text-sm font-black tracking-tight text-slate-900 uppercase dark:text-white">
                     {customer.nickname || '飞客'}
                   </span>
-                  {isBlacklisted && (
+                  {isDisabled && (
                     <span title={t('disabled')}>
                       <ShieldAlert className="text-cinnabar-500 h-3.5 w-3.5" />
                     </span>
@@ -131,10 +143,12 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
               <Phone className="text-brand-500 h-3 w-3" />
-              <span className="font-mono text-xs font-bold">{customer.phoneNumber}</span>
+              <span className="font-mono text-xs font-bold">
+                {customer.phone || customer.phoneNumber}
+              </span>
             </div>
             <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
-              OPENID: {customer.openid?.substring(0, 12)}...
+              NO: {customer.customerNo?.substring(0, 12)}...
             </span>
           </div>
         ),
@@ -157,38 +171,53 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
                 />
               </div>
             </div>
-            <div className="bg-brand-500/10 h-8 w-px" />
-            <div className="flex flex-col">
-              <span className="text-brand-500 text-xs font-black tabular-nums">
-                ¥{customer.totalSpent?.toLocaleString() || 0}
-              </span>
-              <span className="mt-1 text-[9px] text-slate-400 uppercase">
-                {t('totalSpentLabel')}
-              </span>
-            </div>
           </div>
         ),
       },
       {
-        header: t('lastActive'),
+        header: t('registerTime'),
         render: (customer: Customer) => {
-          const activeDate = customer.updateTime || customer.createTime;
+          const date = customer.registerTime || customer.createTime;
           return (
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <Calendar className="text-brand-500 h-3 w-3" />
                 <span className="text-xs font-bold">
-                  {activeDate ? new Date(activeDate).toLocaleDateString() : '-'}
+                  {date ? new Date(date).toLocaleDateString() : '-'}
                 </span>
               </div>
-              <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
-                {activeDate
-                  ? new Date(activeDate).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : '-'}
-              </span>
+              <div className="flex items-center gap-2 text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
+                <MapPin className="h-2.5 w-2.5" />
+                <span>IP: {customer.registerIp || '-'}</span>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: t('loginActivity'),
+        render: (customer: Customer) => {
+          const loginTime = customer.lastLoginTime;
+          return (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <Clock className="text-brand-500 h-3 w-3" />
+                <span className="text-xs font-bold">
+                  {loginTime ? new Date(loginTime).toLocaleDateString() : t('never')}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2 text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
+                  <Fingerprint className="h-2.5 w-2.5" />
+                  <span>{customer.loginType || '-'}</span>
+                </div>
+                {customer.lastLoginIp && (
+                  <div className="flex items-center gap-2 text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
+                    <MapPin className="h-2.5 w-2.5" />
+                    <span>IP: {customer.lastLoginIp}</span>
+                  </div>
+                )}
+              </div>
             </div>
           );
         },
@@ -198,22 +227,22 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
         className: 'pr-14',
         align: 'right' as const,
         render: (customer: Customer) => {
-          const isBlacklisted = customer.status === 'blacklisted';
+          const isDisabled = customer.status === 1;
           return (
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onToggleStatus(customer.customerNo, customer.status || 'active');
+                  onToggleStatus(customer.customerNo, customer.status);
                 }}
                 className={`rounded-xl p-2.5 shadow-sm transition-all ${
-                  isBlacklisted
+                  isDisabled
                     ? 'bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10'
                     : 'bg-cinnabar-500/5 text-cinnabar-500 hover:bg-cinnabar-500/10'
                 }`}
-                title={isBlacklisted ? t('active') : t('disabled')}
+                title={isDisabled ? t('active') : t('disabled')}
               >
-                {isBlacklisted ? (
+                {isDisabled ? (
                   <ShieldCheck className="h-4 w-4" />
                 ) : (
                   <ShieldAlert className="h-4 w-4" />

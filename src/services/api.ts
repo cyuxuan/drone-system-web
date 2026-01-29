@@ -1,10 +1,4 @@
-import {
-  INITIAL_USERS,
-  INITIAL_ROLES,
-  INITIAL_ORDERS,
-  INITIAL_PROJECTS,
-  INITIAL_MENU,
-} from '../constants';
+import { INITIAL_MENU } from '../constants';
 import {
   User,
   Role,
@@ -32,10 +26,6 @@ import { httpClient, ApiResponse, PageData } from './httpClient';
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const _users = [...INITIAL_USERS];
-let _roles = [...INITIAL_ROLES];
-let _orders = [...INITIAL_ORDERS];
-let _projects = [...INITIAL_PROJECTS];
 let _menu = [...INITIAL_MENU];
 
 export const api = {
@@ -167,12 +157,14 @@ export const api = {
   },
   saveRole: async (role: Partial<Role>) => {
     const endpoint = role.id ? '/admin/role/update' : '/admin/role/add';
-    const payload = role.id ? role : {
-      roleName: role.name,
-      roleCode: role.name?.toUpperCase().replace(/\s+/g, '_'),
-      description: role.description,
-      permissions: role.permissions || [],
-    };
+    const payload = role.id
+      ? role
+      : {
+          roleName: role.name,
+          roleCode: role.name?.toUpperCase().replace(/\s+/g, '_'),
+          description: role.description,
+          permissions: role.permissions || [],
+        };
     await httpClient.post<ApiResponse<void>>(endpoint, payload);
     return true;
   },
@@ -211,35 +203,47 @@ export const api = {
 
   // --- Projects ---
   getProjects: async (): Promise<DroneProject[]> => {
-    const res = await httpClient.get<ApiResponse<DroneProject[]>>('/service-project/list');
+    const res = await httpClient.get<ApiResponse<DroneProject[]>>('/admin/service-project/list');
     return res.data || [];
   },
   saveProject: async (project: Partial<DroneProject>) => {
-    await httpClient.post<ApiResponse<void>>('/service-project/save', project);
+    await httpClient.post<ApiResponse<void>>('/admin/service-project/save', project);
     return true;
   },
   deleteProject: async (projectNo: string) => {
-    await httpClient.delete<ApiResponse<void>>(`/service-project/delete?projectNo=${projectNo}`);
+    await httpClient.delete<ApiResponse<void>>(
+      `/admin/service-project/delete?projectNo=${projectNo}`,
+    );
     return true;
   },
 
   // --- Project Types ---
   getProjectTypes: async () => {
-    const res = await httpClient.get<ApiResponse<ProjectType[]>>('/service-type/list');
+    const res = await httpClient.get<ApiResponse<ProjectType[]>>('/admin/service-type/list');
     return res.data || [];
   },
   saveProjectType: async (type: Partial<ProjectType>) => {
-    await httpClient.post<ApiResponse<void>>('/service-type/save', type);
+    await httpClient.post<ApiResponse<void>>('/admin/service-type/save', type);
     return true;
   },
   deleteProjectType: async (typeNo: string) => {
-    await httpClient.delete<ApiResponse<void>>(`/service-type/delete?typeNo=${typeNo}`);
+    await httpClient.delete<ApiResponse<void>>(`/admin/service-type/delete?typeNo=${typeNo}`);
     return true;
   },
 
   // --- Orders ---
-  getOrders: async (params?: { page?: number; pageSize?: number; status?: number; keyword?: string }): Promise<{ list: DroneOrder[]; total: number }> => {
-    const res = await httpClient.get<ApiResponse<{ list: any[]; total: number }>>('/order/all', { params });
+  getOrders: async (params?: {
+    page?: number;
+    pageSize?: number;
+    status?: number;
+    keyword?: string;
+  }): Promise<{ list: DroneOrder[]; total: number }> => {
+    const res = await httpClient.get<ApiResponse<{ list: any[]; total: number }>>(
+      '/admin/order/all',
+      {
+        params,
+      },
+    );
     const data = res.data;
     return {
       list: (data?.list || []).map((o) => ({
@@ -264,13 +268,14 @@ export const api = {
       // But for now, let's assume the backend can handle the Partial<DroneOrder> or we map it
       const planInfo = {
         budgetAmount: order.budgetAmount || order.amount,
-        desiredStartTime: order.desiredStartTime || new Date().toISOString().replace('T', ' ').substring(0, 16),
+        desiredStartTime:
+          order.desiredStartTime || new Date().toISOString().replace('T', ' ').substring(0, 16),
         workPlace: order.departurePlace || order.location,
         serviceTypeNo: order.serviceTypeNo || 'ST-001', // Default or from form
         serviceProjectNo: order.serviceTypeNo || 'SP-001',
         serviceProjectName: order.projectName,
-        departureLng: 116.40, // Mocked or from form
-        departureLat: 39.90,
+        departureLng: 116.4, // Mocked or from form
+        departureLat: 39.9,
         remarks: order.remarks,
       };
       await httpClient.post<ApiResponse<string>>('/order/create-plan', planInfo);
@@ -334,7 +339,7 @@ export const api = {
   getCustomers: async (pageNum: number = 1, pageSize: number = 10, keyword?: string) => {
     // 后端目前只有 list 接口，暂不支持分页，先模拟分页结构
     const res = await httpClient.get<ApiResponse<Customer[]>>(
-      `/customer/list${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`,
+      `/admin/customer/list${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`,
     );
     const allData = res.data;
     const pageData: PageData<Customer> = {
@@ -354,9 +359,10 @@ export const api = {
     await httpClient.delete<ApiResponse<void>>(`/customer/delete?customerNo=${customerNo}`);
     return true;
   },
-  updateCustomerStatus: async (_customerNo: string, _status: 'active' | 'blacklisted') => {
-    // 后端目前没有更新状态接口，先模拟成功
-    console.warn('Backend does not support updating customer status yet');
+  updateCustomerStatus: async (customerNo: string, status: number) => {
+    await httpClient.post<ApiResponse<void>>(
+      `/admin/customer/status?customerNo=${customerNo}&status=${status}`,
+    );
     return true;
   },
 };

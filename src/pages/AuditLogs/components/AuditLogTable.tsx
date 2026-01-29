@@ -26,6 +26,15 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
 }) => {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
+  const formatJsonText = (value?: string | null) => {
+    if (!value) return 'N/A';
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return value;
+    }
+  };
+
   const columns = React.useMemo(
     () => [
       {
@@ -36,7 +45,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
             <div className="bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20 flex h-10 w-10 items-center justify-center rounded-xl border text-xs font-black shadow-inner">
               {log.username?.charAt(0).toUpperCase() || '?'}
             </div>
-            <span className="text-sm font-black tracking-tight text-slate-900 uppercase dark:text-slate-100">
+            <span className="block max-w-56 truncate text-sm font-black tracking-tight text-slate-900 uppercase dark:text-slate-100">
               {log.username}
             </span>
           </div>
@@ -56,7 +65,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
               )}
               {t(log.operation)}
             </div>
-            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+            <span className="block max-w-96 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
               {log.method}
             </span>
           </div>
@@ -82,7 +91,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
       {
         header: t('ipAddress'),
         render: (log: AuditLog) => (
-          <div className="flex items-center gap-2.5 font-mono text-xs tracking-tighter text-slate-400 dark:text-slate-500">
+          <div className="flex max-w-64 items-center gap-2.5 truncate font-mono text-xs tracking-tighter text-slate-400 dark:text-slate-500">
             <Globe className="text-brand-500 h-3.5 w-3.5 opacity-50" /> {log.ip}
           </div>
         ),
@@ -190,7 +199,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     </div>
                   </div>
                   <pre className="custom-scrollbar mt-8 max-h-64 overflow-y-auto p-6 font-mono text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
-                    {JSON.stringify(JSON.parse(selectedLog.params || '{}'), null, 2)}
+                    {formatJsonText(selectedLog.params)}
                   </pre>
                 </div>
               </div>
@@ -211,15 +220,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
                     </div>
                   </div>
                   <pre className="custom-scrollbar mt-8 max-h-64 overflow-y-auto p-6 font-mono text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
-                    {selectedLog.result
-                      ? (() => {
-                          try {
-                            return JSON.stringify(JSON.parse(selectedLog.result!), null, 2);
-                          } catch {
-                            return selectedLog.result;
-                          }
-                        })()
-                      : 'N/A'}
+                    {formatJsonText(selectedLog.result)}
                   </pre>
                 </div>
               </div>
