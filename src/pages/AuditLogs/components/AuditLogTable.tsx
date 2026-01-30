@@ -140,12 +140,14 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
         paginationConfig={paginationConfig}
       />
 
-      {/* Detail Modal */}
       <Modal
         isOpen={!!selectedLog}
         onClose={() => setSelectedLog(null)}
         title={t('viewDetails')}
         maxWidth="max-w-3xl"
+        showCancel={false}
+        saveText={t('close')}
+        onSave={() => setSelectedLog(null)}
       >
         {selectedLog && (
           <div className="space-y-8">
@@ -157,6 +159,11 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
                 <p className="font-black text-slate-900 uppercase dark:text-white">
                   {selectedLog.username}
                 </p>
+                {selectedLog.userId && (
+                  <p className="font-mono text-[10px] text-slate-500 lowercase opacity-70">
+                    ID: {selectedLog.userId}
+                  </p>
+                )}
               </div>
               <div className="glass-hud border-brand-500/10 flex flex-col gap-1 rounded-2xl border p-4 shadow-sm">
                 <label className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">
@@ -241,15 +248,6 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
                 </div>
               </div>
             )}
-
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="btn-tactical-secondary rounded-2xl px-10 py-3 text-xs font-black tracking-[0.2em] uppercase"
-              >
-                {t('close')}
-              </button>
-            </div>
           </div>
         )}
       </Modal>

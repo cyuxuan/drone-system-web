@@ -11,7 +11,7 @@ interface RoleTableProps {
   onRetry?: () => void;
   onEdit: (role: Role) => void;
   onDelete: (id: string) => void;
-  onViewMembers: (roleName: string) => void;
+  onViewMembers: (role: Role) => void;
   paginationConfig?: PaginationConfig;
   t: (key: string) => string;
 }
@@ -72,7 +72,7 @@ const RoleTable: React.FC<RoleTableProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onViewMembers(role.name);
+                onViewMembers(role);
               }}
               className="hover:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center gap-2 rounded-lg px-3 py-1.5 text-[9px] font-black tracking-widest uppercase transition-all"
               title={t('viewUsers')}

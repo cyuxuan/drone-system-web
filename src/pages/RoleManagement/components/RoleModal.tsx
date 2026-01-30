@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, FileText, LayoutGrid, CheckSquare, Square, Save } from 'lucide-react';
+import { Shield, FileText, LayoutGrid, CheckSquare, Square } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import { Role } from '../../../types';
 import { useAppContext } from '../../../context';
@@ -11,6 +11,7 @@ interface RoleModalProps {
   formData: Partial<Role>;
   setFormData: React.Dispatch<React.SetStateAction<Partial<Role>>>;
   onSave: (e: React.FormEvent) => Promise<void>;
+  isSaving?: boolean;
 }
 
 const PERMISSION_CATEGORIES = [
@@ -61,6 +62,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
   formData,
   setFormData,
   onSave,
+  isSaving = false,
 }) => {
   const { t } = useAppContext();
 
@@ -100,8 +102,12 @@ const RoleModal: React.FC<RoleModalProps> = ({
       onClose={onClose}
       title={editingRole ? t('editRole') : t('addRole')}
       maxWidth="max-w-4xl"
+      onSave={onSave}
+      isSaving={isSaving}
+      saveText={editingRole ? t('saveChanges') : t('confirmAdd')}
+      formId="role-form"
     >
-      <form onSubmit={onSave} className="space-y-8">
+      <form id="role-form" onSubmit={onSave} className="space-y-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
@@ -109,10 +115,11 @@ const RoleModal: React.FC<RoleModalProps> = ({
             </label>
             <input
               required
+              disabled={isSaving}
               type="text"
               value={formData.name || ''}
               onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               placeholder={t('roleNamePlaceholder')}
             />
           </div>
@@ -122,9 +129,10 @@ const RoleModal: React.FC<RoleModalProps> = ({
             </label>
             <input
               type="text"
+              disabled={isSaving}
               value={formData.description || ''}
               onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               placeholder={t('descriptionPlaceholder')}
             />
           </div>
@@ -144,14 +152,16 @@ const RoleModal: React.FC<RoleModalProps> = ({
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-brand-600 dark:text-brand-400 hover:bg-brand-500/10 border-brand-500/20 rounded-lg border px-3 py-1.5 text-[9px] font-black tracking-widest uppercase transition-all"
+                disabled={isSaving}
+                className="text-brand-600 dark:text-brand-400 hover:bg-brand-500/10 border-brand-500/20 rounded-lg border px-3 py-1.5 text-[9px] font-black tracking-widest uppercase transition-all disabled:opacity-50"
               >
                 {t('selectAll')}
               </button>
               <button
                 type="button"
                 onClick={handleClearAll}
-                className="rounded-lg border border-slate-500/20 px-3 py-1.5 text-[9px] font-black tracking-widest text-slate-400 uppercase transition-all hover:bg-slate-500/10"
+                disabled={isSaving}
+                className="rounded-lg border border-slate-500/20 px-3 py-1.5 text-[9px] font-black tracking-widest text-slate-400 uppercase transition-all hover:bg-slate-500/10 disabled:opacity-50"
               >
                 {t('clearAll')}
               </button>
@@ -176,8 +186,9 @@ const RoleModal: React.FC<RoleModalProps> = ({
                     </span>
                     <button
                       type="button"
+                      disabled={isSaving}
                       onClick={() => toggleCategory(categoryPermIds)}
-                      className="hover:text-brand-500 text-[9px] font-black text-slate-400 uppercase transition-colors"
+                      className="hover:text-brand-500 text-[9px] font-black text-slate-400 uppercase transition-colors disabled:opacity-50"
                     >
                       {allSelected ? t('clearAll') : t('selectModule')}
                     </button>
@@ -189,12 +200,13 @@ const RoleModal: React.FC<RoleModalProps> = ({
                         <button
                           key={perm.id}
                           type="button"
+                          disabled={isSaving}
                           onClick={() => togglePermission(perm.id)}
                           className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                             isSelected
                               ? 'bg-brand-500/10 border-brand-500/30 text-brand-600 dark:text-brand-400'
                               : 'hover:bg-brand-500/5 border-transparent bg-transparent text-slate-400'
-                          }`}
+                          } disabled:opacity-50`}
                         >
                           {isSelected ? (
                             <CheckSquare className="h-4 w-4 shrink-0" />
@@ -212,22 +224,6 @@ const RoleModal: React.FC<RoleModalProps> = ({
               );
             })}
           </div>
-        </div>
-
-        <div className="border-brand-500/10 flex justify-end gap-4 border-t pt-8">
-          <button
-            type="button"
-            onClick={onClose}
-            className="hover:text-brand-500 rounded-2xl px-8 py-4 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all dark:text-slate-500"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            className="btn-jade flex items-center gap-3 rounded-2xl px-10 py-4 text-[10px] font-black tracking-[0.2em] uppercase shadow-xl"
-          >
-            <Save className="h-4 w-4" /> {editingRole ? t('saveChanges') : t('confirmAdd')}
-          </button>
         </div>
       </form>
     </Modal>

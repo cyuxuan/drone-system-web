@@ -15,14 +15,13 @@ export enum UserRole {
 
 export interface User {
   id: number;
-  sysUserId: string;
+  userId: string;
   username: string;
   email: string;
-  phoneNumber?: string;
+  phone?: string;
   role: UserRole;
-  status: 'active' | 'disabled';
-  createdAt: string;
-  location?: string; // Home base/Current location
+  status: number; // 0-正常, 1-禁用, 3-已删除
+  createTime: string;
 }
 
 export interface Role {
@@ -73,7 +72,22 @@ export interface DroneOrder {
   departurePlace: string;
   remarks?: string;
   serviceTypeNo?: string;
-  phoneNumber?: string;
+  phone?: string;
+}
+
+export interface BackendOrder {
+  id: number;
+  planNo: string;
+  userId: string;
+  budgetAmount: number;
+  status: number;
+  createTime: string;
+  desiredStartTime: string;
+  departurePlace: string;
+  serviceTypeNo?: string;
+  remarks?: string;
+  serviceProjectName?: string;
+  phone?: string;
 }
 
 export interface DroneProject {
@@ -105,6 +119,7 @@ export interface ProjectType {
 export interface AuditLog {
   id: number;
   username: string;
+  userId?: string;
   module: string;
   operation: string;
   method: string;
@@ -137,7 +152,6 @@ export interface Customer {
   userId: string;
   customerNo: string;
   phone: string;
-  phoneNumber?: string;
   nickname?: string;
   avatarUrl?: string;
   source: CustomerSource;

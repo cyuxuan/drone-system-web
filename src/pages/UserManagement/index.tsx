@@ -29,9 +29,9 @@ const UserManagement = () => {
   const [formData, setFormData] = useState<Partial<User>>({
     username: '',
     email: '',
-    phoneNumber: '',
+    phone: '',
     role: UserRole.CLIENT,
-    status: 'active',
+    status: 0,
   });
   const [roles, setRoles] = useState<Role[]>([]);
 
@@ -97,11 +97,11 @@ const UserManagement = () => {
     setFormData({
       username: '',
       email: '',
-      phoneNumber: '',
+      phone: '',
       role: UserRole.CLIENT,
-      status: 'active',
-      password: '',
-    } as Partial<User & { password?: string }> as Partial<User>);
+      status: 0,
+    });
+    setFormData((prev) => ({ ...prev, password: '' }));
     setIsModalOpen(true);
   };
 
@@ -157,7 +157,7 @@ const UserManagement = () => {
     }
   };
 
-  const handleBulkStatusChange = async (newStatus: 'active' | 'disabled') => {
+  const handleBulkStatusChange = async (newStatus: number) => {
     try {
       for (const id of selectedIds) {
         await api.updateUserStatus(id, newStatus);
@@ -282,13 +282,13 @@ const UserManagement = () => {
           {
             label: t('bulkActivate'),
             icon: UserCheck,
-            onClick: () => handleBulkStatusChange('active'),
+            onClick: () => handleBulkStatusChange(0),
             variant: 'success',
           },
           {
             label: t('bulkDeactivate'),
             icon: UserMinus,
-            onClick: () => handleBulkStatusChange('disabled'),
+            onClick: () => handleBulkStatusChange(1),
             variant: 'warning',
           },
           {

@@ -80,7 +80,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
         header: t('projectClient'),
         render: (order: DroneOrder) => (
           <div>
-            <p className="text-brand-600 dark:text-brand-400 whitespace-nowrap text-sm font-black tracking-tight uppercase">
+            <p className="text-brand-600 dark:text-brand-400 text-sm font-black tracking-tight whitespace-nowrap uppercase">
               {order.projectName}
             </p>
           </div>
@@ -100,7 +100,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
                 {order.clientName}
               </p>
               <p className="mt-0.5 text-[10px] font-medium tracking-wider text-slate-400 dark:text-slate-500">
-                {maskPhone(order.phoneNumber)}
+                {maskPhone(order.phone)}
               </p>
             </div>
           );
@@ -146,7 +146,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
       {
         header: t('issueTime'),
         render: (order: DroneOrder) => (
-          <div className="flex items-center gap-2 whitespace-nowrap text-[10px] font-black text-slate-400 uppercase dark:text-slate-500">
+          <div className="flex items-center gap-2 text-[10px] font-black whitespace-nowrap text-slate-400 uppercase dark:text-slate-500">
             <Calendar className="text-brand-500/40 h-3.5 w-3.5" /> {order.date}
           </div>
         ),
@@ -156,7 +156,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
         className: 'pr-14',
         align: 'right' as const,
         render: (order: DroneOrder) => (
-          <div className="flex items-center justify-end gap-2 opacity-0 transition-opacity whitespace-nowrap group-hover:opacity-100">
+          <div className="flex items-center justify-end gap-2 whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100">
             <button
               onClick={(e) => {
                 e.stopPropagation();

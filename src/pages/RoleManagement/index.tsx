@@ -21,6 +21,7 @@ const RoleManagement = () => {
 
   // Role Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingRole, setEditingRole] = useState<Partial<Role> | null>(null);
   const [formData, setFormData] = useState<Partial<Role>>({
     name: '',
@@ -39,7 +40,7 @@ const RoleManagement = () => {
     try {
       const data = await api.getRoles();
       // 将后端数据格式转换为前端格式
-      const mappedRoles = data.map(role => ({
+      const mappedRoles = data.map((role) => ({
         ...role,
         id: role.roleId || role.id,
         name: role.roleName || role.name,
@@ -84,6 +85,8 @@ const RoleManagement = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       await api.saveRole(formData);
       setIsModalOpen(false);
@@ -100,6 +103,8 @@ const RoleManagement = () => {
         title: t('error'),
         message: t('operationFailed'),
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -129,11 +134,12 @@ const RoleManagement = () => {
     }
   };
 
-  const handleViewMembers = async (roleName: string) => {
-    setViewingMembersRole(roleName);
+  const handleViewMembers = async (role: Role) => {
+    setViewingMembersRole(role.name);
     setMembersLoading(true);
     try {
-      const members = await api.getUsersByRole(roleName);
+      const code = role.roleCode || role.name;
+      const members = await api.getUsersByRole(code);
       setRoleMembers(members);
     } catch (error) {
       console.error('Failed to fetch role members:', error);
@@ -214,12 +220,23 @@ const RoleManagement = () => {
         formData={formData}
         setFormData={setFormData}
         onSave={handleSave}
+        isSaving={isSaving}
       />
 
       <Modal
         isOpen={!!viewingMembersRole}
         onClose={() => setViewingMembersRole(null)}
         title={`${viewingMembersRole} - ${t('memberList')}`}
+        footer={
+          <div className="flex justify-end">
+            <button
+              onClick={() => setViewingMembersRole(null)}
+              className="hover:text-brand-500 rounded-xl px-8 py-3 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        }
       >
         <div className="space-y-6">
           <div className="bg-brand-500/5 border-brand-500/10 flex items-center gap-4 rounded-2xl border p-4">
@@ -280,15 +297,6 @@ const RoleManagement = () => {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="border-brand-500/10 flex justify-end border-t pt-6">
-            <button
-              onClick={() => setViewingMembersRole(null)}
-              className="hover:text-brand-500 rounded-xl px-8 py-3 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all"
-            >
-              {t('cancel')}
-            </button>
           </div>
         </div>
       </Modal>

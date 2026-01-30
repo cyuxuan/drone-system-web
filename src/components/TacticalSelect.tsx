@@ -14,6 +14,7 @@ interface TacticalSelectProps {
   placeholder?: string;
   className?: string;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 const TacticalSelect: React.FC<TacticalSelectProps> = ({
@@ -23,6 +24,7 @@ const TacticalSelect: React.FC<TacticalSelectProps> = ({
   placeholder = 'Select...',
   className = '',
   icon,
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,8 +44,9 @@ const TacticalSelect: React.FC<TacticalSelectProps> = ({
     <div className={`relative ${className}`} ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 group flex w-full items-center justify-between rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 group flex w-full items-center justify-between rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
       >
         <div className="flex items-center gap-3 truncate">
           {icon && (

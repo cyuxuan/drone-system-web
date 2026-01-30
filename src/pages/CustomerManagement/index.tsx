@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { Customer } from '../../types';
 import { useAppContext } from '../../context';
 import CustomerTable from './components/CustomerTable';
+import CustomerModal from './components/CustomerModal';
 import BulkActionHub from '../../components/BulkActionHub';
 
 const CustomerManagement = () => {
@@ -13,6 +14,11 @@ const CustomerManagement = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState<Partial<Customer>>({});
+
   const handleDataChange = useCallback((data: Customer[], _totalCount: number) => {
     setCustomers(data);
   }, []);
@@ -20,6 +26,35 @@ const CustomerManagement = () => {
   const handleRefresh = useCallback(() => {
     setRefreshKey((prev) => prev + 1);
   }, []);
+
+  const handleEdit = (customer: Customer) => {
+    setFormData(customer);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await api.updateCustomerStatus(formData.customerNo!, formData.status === 0 ? 1 : 0);
+      setIsModalOpen(false);
+      handleRefresh();
+      showMessage({
+        type: 'success',
+        title: t('success'),
+        message: t('saveSuccess'),
+      });
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+      showMessage({
+        type: 'error',
+        title: t('error'),
+        message: t('operationFailed'),
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleToggleStatus = async (id: string, currentStatus: number) => {
     const newStatus = currentStatus === 0 ? 1 : 0;
@@ -137,12 +172,23 @@ const CustomerManagement = () => {
           onToggleSelect={handleToggleSelect}
           onDelete={handleDelete}
           onToggleStatus={handleToggleStatus}
+          onRowClick={handleEdit}
           paginationConfig={{
             enabled: true,
             showPageSizeChanger: true,
           }}
         />
       </div>
+
+      {/* Customer Modal */}
+      <CustomerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
 
       {/* Action Hub */}
       <BulkActionHub

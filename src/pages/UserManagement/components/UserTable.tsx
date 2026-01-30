@@ -61,7 +61,7 @@ const UserTable: React.FC<UserTableProps> = ({
         render: (user: User) => (
           <div className="flex items-center gap-2 font-mono text-xs font-medium text-slate-500 dark:text-slate-400">
             <Phone className="h-3 w-3 text-slate-400" />
-            {user.phoneNumber || '-'}
+            {user.phone || '-'}
           </div>
         ),
       },
@@ -81,12 +81,12 @@ const UserTable: React.FC<UserTableProps> = ({
         render: (user: User) => (
           <div className="flex items-center gap-2">
             <div
-              className={`h-1.5 w-1.5 animate-pulse rounded-full ${user.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-400'}`}
+              className={`h-1.5 w-1.5 animate-pulse rounded-full ${user.status === 0 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-400'}`}
             />
             <span
-              className={`text-[10px] font-black uppercase ${user.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}
+              className={`text-[10px] font-black uppercase ${user.status === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}
             >
-              {user.status === 'active' ? t('operational') : t('disabled')}
+              {user.status === 0 ? t('operational') : t('disabled')}
             </span>
           </div>
         ),
@@ -96,7 +96,7 @@ const UserTable: React.FC<UserTableProps> = ({
         className: 'px-6',
         render: (user: User) => (
           <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase dark:text-slate-500">
-            <Globe className="text-brand-500/40 h-3.5 w-3.5" /> {user.createdAt}
+            <Globe className="text-brand-500/40 h-3.5 w-3.5" /> {user.createTime}
           </div>
         ),
       },

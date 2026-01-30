@@ -9,7 +9,6 @@ import {
   Search,
   Zap,
   Shield,
-  Save,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MenuItem } from '../../../types';
@@ -40,6 +39,7 @@ const MenuModal: React.FC<MenuModalProps> = ({
   const [iconSearch, setIconSearch] = useState('');
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isParentPickerOpen, setIsParentPickerOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Sync formData with initialData using a simpler effect
   const [lastInitialData, setLastInitialData] = useState(initialData);
@@ -49,9 +49,14 @@ const MenuModal: React.FC<MenuModalProps> = ({
     setLastInitialData(initialData);
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddAction = () => {
@@ -213,8 +218,12 @@ const MenuModal: React.FC<MenuModalProps> = ({
       onClose={onClose}
       title={isEditing ? t('editMenuItem') : t('addMenuItem')}
       maxWidth="max-w-2xl"
+      onSave={handleSubmit}
+      isSaving={isSaving}
+      saveText={isEditing ? t('saveChanges') : t('confirmAdd')}
+      formId="menu-form"
     >
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form id="menu-form" onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           {/* Label */}
           <div className="space-y-3">
@@ -224,9 +233,10 @@ const MenuModal: React.FC<MenuModalProps> = ({
             <input
               type="text"
               required
+              disabled={isSaving}
               value={formData.label || ''}
               onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               placeholder={t('categoryNamePlaceholder')}
             />
           </div>
@@ -239,9 +249,10 @@ const MenuModal: React.FC<MenuModalProps> = ({
             <input
               type="text"
               required
+              disabled={isSaving}
               value={formData.path || ''}
               onChange={(e) => setFormData({ ...formData, path: e.target.value })}
-              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               placeholder="/path/to/page"
             />
           </div>
@@ -256,8 +267,9 @@ const MenuModal: React.FC<MenuModalProps> = ({
             <div className="relative">
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => setIsParentPickerOpen(!isParentPickerOpen)}
-                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               >
                 <div className="bg-brand-500/10 text-brand-500 flex h-6 w-6 items-center justify-center rounded">
                   <Layout className="h-3.5 w-3.5" />
@@ -324,13 +336,14 @@ const MenuModal: React.FC<MenuModalProps> = ({
             <div className="relative">
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => {
                   if (isIconPickerOpen) {
                     setIconSearch('');
                   }
                   setIsIconPickerOpen(!isIconPickerOpen);
                 }}
-                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none dark:bg-slate-900 dark:text-white"
+                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
               >
                 <div className="bg-brand-500/10 text-brand-500 flex h-6 w-6 items-center justify-center rounded">
                   {renderIcon(formData.icon || 'Layout')}
@@ -424,9 +437,10 @@ const MenuModal: React.FC<MenuModalProps> = ({
                 <Shield className="absolute top-1/2 left-4 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
+                  disabled={isSaving}
                   value={newAction.key}
                   onChange={(e) => setNewAction({ ...newAction, key: e.target.value })}
-                  className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-xl border-b px-10 py-3 text-xs font-bold outline-none dark:bg-slate-800/50"
+                  className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-xl border-b px-10 py-3 text-xs font-bold outline-none disabled:opacity-50 dark:bg-slate-800/50"
                   placeholder={t('btnKey')}
                 />
               </div>
@@ -434,16 +448,17 @@ const MenuModal: React.FC<MenuModalProps> = ({
                 <MousePointer2 className="absolute top-1/2 left-4 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
+                  disabled={isSaving}
                   value={newAction.label}
                   onChange={(e) => setNewAction({ ...newAction, label: e.target.value })}
-                  className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-xl border-b px-10 py-3 text-xs font-bold outline-none dark:bg-slate-800/50"
+                  className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-xl border-b px-10 py-3 text-xs font-bold outline-none disabled:opacity-50 dark:bg-slate-800/50"
                   placeholder={t('btnLabel')}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddAction}
-                disabled={!newAction.key || !newAction.label}
+                disabled={isSaving || !newAction.key || !newAction.label}
                 className="btn-jade flex items-center justify-center gap-2 rounded-xl text-[10px] font-black tracking-widest uppercase disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" /> {t('addAction')}
@@ -488,22 +503,6 @@ const MenuModal: React.FC<MenuModalProps> = ({
               )}
             </div>
           </div>
-        </div>
-
-        <div className="border-brand-500/10 flex justify-end gap-4 border-t pt-8">
-          <button
-            type="button"
-            onClick={onClose}
-            className="hover:text-brand-500 rounded-2xl px-8 py-4 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all dark:text-slate-500"
-          >
-            {t('cancel')}
-          </button>
-          <button
-            type="submit"
-            className="btn-jade flex items-center gap-3 rounded-2xl px-10 py-4 text-[10px] font-black tracking-[0.2em] uppercase shadow-xl"
-          >
-            <Save className="h-4 w-4" /> {isEditing ? t('saveChanges') : t('confirmAdd')}
-          </button>
         </div>
       </form>
     </Modal>

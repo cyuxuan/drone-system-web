@@ -1,14 +1,24 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Save } from 'lucide-react';
+import { useAppContext } from '../context';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
+  onSave?: (e: React.FormEvent) => void | Promise<void>;
+  onCancel?: () => void;
+  isSaving?: boolean;
+  saveText?: string;
+  cancelText?: string;
+  showCancel?: boolean;
+  showFooter?: boolean;
   maxWidth?: string;
+  formId?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -16,8 +26,18 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
+  footer,
+  onSave,
+  onCancel,
+  isSaving = false,
+  saveText,
+  cancelText,
+  showCancel = true,
+  showFooter = true,
   maxWidth = 'max-w-2xl',
+  formId,
 }) => {
+  const { t } = useAppContext();
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -59,9 +79,39 @@ const Modal: React.FC<ModalProps> = ({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="custom-scrollbar max-h-[80vh] flex-1 overflow-y-auto p-8">
+            <div className="custom-scrollbar max-h-[calc(80vh-160px)] flex-1 overflow-y-auto p-8">
               {children}
             </div>
+            {showFooter && (footer || onSave || onCancel) && (
+              <div className="border-brand-500/10 bg-brand-500/5 shrink-0 border-t px-8 py-6">
+                {footer || (
+                  <div className="flex justify-end gap-4">
+                    {showCancel && (onCancel || onClose) && (
+                      <button
+                        type="button"
+                        onClick={onCancel || onClose}
+                        disabled={isSaving}
+                        className="hover:text-brand-500 rounded-2xl px-8 py-4 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500"
+                      >
+                        {cancelText || t('cancel')}
+                      </button>
+                    )}
+                    {onSave && (
+                      <button
+                        type={formId ? 'submit' : 'button'}
+                        form={formId}
+                        onClick={formId ? undefined : onSave}
+                        disabled={isSaving}
+                        className="btn-jade flex items-center gap-3 rounded-2xl px-10 py-4 text-[10px] font-black tracking-[0.2em] uppercase shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Save className={`h-4 w-4 ${isSaving ? 'animate-spin' : ''}`} />
+                        {isSaving ? t('saving') : saveText || t('confirm')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       )}

@@ -29,6 +29,7 @@ const ProjectCategory = () => {
 
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Partial<ProjectType> | null>(null);
   const [formData, setFormData] = useState<Partial<ProjectType>>({
     name: '',
@@ -85,6 +86,7 @@ const ProjectCategory = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       await api.saveProjectType(formData);
       setIsModalOpen(false);
@@ -101,6 +103,8 @@ const ProjectCategory = () => {
         title: t('error'),
         message: t('operationFailed'),
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -283,6 +287,7 @@ const ProjectCategory = () => {
         formData={formData}
         setFormData={setFormData}
         editingCategory={editingCategory}
+        isSaving={isSaving}
       />
     </div>
   );

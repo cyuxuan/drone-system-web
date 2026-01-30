@@ -31,6 +31,7 @@ interface CustomerTableProps {
   onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, currentStatus: number) => void;
+  onRowClick?: (customer: Customer) => void;
   paginationConfig?: PaginationConfig;
 }
 
@@ -92,6 +93,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
   onToggleSelect,
   onDelete,
   onToggleStatus,
+  onRowClick,
   paginationConfig,
 }) => {
   const { t } = useAppContext();
@@ -143,9 +145,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
               <Phone className="text-brand-500 h-3 w-3" />
-              <span className="font-mono text-xs font-bold">
-                {customer.phone || customer.phoneNumber}
-              </span>
+              <span className="font-mono text-xs font-bold">{customer.phone}</span>
             </div>
             <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase dark:text-slate-500">
               NO: {customer.customerNo?.substring(0, 12)}...
@@ -277,6 +277,7 @@ const CustomerTable: React.FC<CustomerTableProps> = ({
       hasError={hasError}
       errorType={errorType}
       onRetry={onRetry}
+      onRowClick={onRowClick}
       selectionConfig={{
         selectedIds,
         onSelectAll,

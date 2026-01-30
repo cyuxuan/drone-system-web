@@ -10,16 +10,15 @@ import {
   MenuItem,
   Customer,
   UserRole,
+  BackendOrder,
 } from '../types';
-
 interface BackendSysUser {
   id: number;
-  sysUserId: string;
+  userId: string;
   username: string;
-  account: string;
   email: string;
   phone?: string;
-  accountStatus: number;
+  status: number;
   createTime: string;
 }
 import { httpClient, ApiResponse, PageData } from './httpClient';
@@ -106,13 +105,13 @@ export const api = {
 
     const users = (res.data.list || []).map((u) => ({
       id: u.id,
-      sysUserId: u.sysUserId,
+      userId: u.userId,
       username: u.username,
       email: u.email,
-      phoneNumber: u.phone,
+      phone: u.phone,
       role: UserRole.ADMIN, // Default to ADMIN as backend doesn't store roles yet
-      status: (u.accountStatus === 1 ? 'active' : 'disabled') as 'active' | 'disabled',
-      createdAt: u.createTime ? u.createTime.split('T')[0] : '',
+      status: u.status,
+      createTime: u.createTime,
     }));
 
     return {
@@ -121,16 +120,15 @@ export const api = {
     };
   },
   saveUser: async (user: Partial<User>) => {
-    const payload: Partial<BackendSysUser> & { password?: string } = {
+    const payload: Partial<BackendSysUser> & { passwordHash?: string } = {
       id: user.id,
-      sysUserId: user.sysUserId,
+      userId: user.userId,
       username: user.username,
-      account: user.username, // Use username as account
       email: user.email,
-      phone: user.phoneNumber,
-      accountStatus: user.status === 'active' ? 1 : 0,
+      phone: user.phone,
+      status: user.status ?? 0,
       // For add, we might need a default password if not provided
-      password: (user as { password?: string }).password || '123456',
+      passwordHash: (user as { password?: string }).password || '123456',
     };
 
     if (user.id) {
@@ -144,9 +142,8 @@ export const api = {
     await httpClient.post<ApiResponse<void>>(`/admin/user/delete?id=${id}`);
     return true;
   },
-  updateUserStatus: async (id: number, status: 'active' | 'disabled') => {
-    const accountStatus = status === 'active' ? 1 : 0;
-    await httpClient.post<ApiResponse<void>>(`/admin/user/status?id=${id}&status=${accountStatus}`);
+  updateUserStatus: async (id: number, status: number) => {
+    await httpClient.post<ApiResponse<void>>(`/admin/user/status?id=${id}&status=${status}`);
     return true;
   },
 
@@ -156,12 +153,21 @@ export const api = {
     return res.data || [];
   },
   saveRole: async (role: Partial<Role>) => {
-    const endpoint = role.id ? '/admin/role/update' : '/admin/role/add';
-    const payload = role.id
-      ? role
+    const isUpdate = !!role.id || !!role.roleId;
+    const endpoint = isUpdate ? '/admin/role/update' : '/admin/role/add';
+    const payload = isUpdate
+      ? {
+          roleId: role.roleId || (role.id as string),
+          roleName: role.name ?? role.roleName,
+          roleCode: role.roleCode,
+          description: role.description,
+          permissions: role.permissions || [],
+          isActive: role.isActive,
+          isSystem: role.isSystem,
+        }
       : {
-          roleName: role.name,
-          roleCode: role.name?.toUpperCase().replace(/\s+/g, '_'),
+          roleName: role.name || '',
+          roleCode: role.roleCode || role.name?.toUpperCase().replace(/\s+/g, '_'),
           description: role.description,
           permissions: role.permissions || [],
         };
@@ -238,7 +244,7 @@ export const api = {
     status?: number;
     keyword?: string;
   }): Promise<{ list: DroneOrder[]; total: number }> => {
-    const res = await httpClient.get<ApiResponse<{ list: any[]; total: number }>>(
+    const res = await httpClient.get<ApiResponse<{ list: BackendOrder[]; total: number }>>(
       '/admin/order/all',
       {
         params,
@@ -246,16 +252,18 @@ export const api = {
     );
     const data = res.data;
     return {
-      list: (data?.list || []).map((o) => ({
-        ...o,
-        orderNumber: o.planNo,
-        projectName: (o as any).serviceProjectName || 'Standard Mission',
-        clientName: o.userId,
-        amount: o.budgetAmount,
-        date: o.createTime ? o.createTime.split('T')[0] : '',
-        location: o.departurePlace,
-        phoneNumber: (o as any).phoneNumber,
-      })),
+      list: (data?.list || []).map(
+        (o: BackendOrder): DroneOrder => ({
+          ...o,
+          orderNumber: o.planNo,
+          projectName: o.serviceProjectName || 'Standard Mission',
+          clientName: o.userId,
+          amount: o.budgetAmount,
+          date: o.createTime ? o.createTime.split('T')[0] : '',
+          location: o.departurePlace,
+          phone: o.phone,
+        }),
+      ),
       total: data?.total || 0,
     };
   },
