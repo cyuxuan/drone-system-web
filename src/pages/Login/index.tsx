@@ -13,9 +13,11 @@ import {
   Bell,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { User as UserType, UserRole } from '../../types';
 import CustomClickCaptcha from '../../components/CustomClickCaptcha';
 import { httpClient } from '../../services/httpClient';
 import { notify } from '../../utils/notify';
+import { useAuth } from '../../context/AuthContext';
 
 interface LoginResponse {
   code: number;
@@ -31,6 +33,8 @@ interface LoginResponse {
       avatarUrl?: string;
       phone?: string;
       email?: string;
+      roles?: string[];
+      permissions?: string[];
       mfaEnabled?: boolean;
       phoneVerified?: boolean;
       emailVerified?: boolean;
@@ -51,6 +55,7 @@ const Login: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,10 +89,30 @@ const Login: React.FC = () => {
           setCaptchaVerification('');
           return;
         }
-        localStorage.setItem('token', res.data.accessToken);
+
         if (res.data.userInfo) {
-          localStorage.setItem('user', JSON.stringify(res.data.userInfo));
+          const user: UserType = {
+            id: 0, // Fallback as userInfo doesn't have numeric id
+            userId: res.data.userInfo.userId,
+            username: res.data.userInfo.nickname || res.data.userInfo.userId,
+            email: res.data.userInfo.email || '',
+            phone: res.data.userInfo.phone,
+            nickname: res.data.userInfo.nickname,
+            userType: res.data.userInfo.userType,
+            identity: res.data.userInfo.identity,
+            role: (res.data.userInfo.roles?.[0] as UserRole) || UserRole.CLIENT,
+            status: 0,
+            createTime: new Date().toISOString(),
+          };
+
+          login(
+            res.data.accessToken,
+            user,
+            res.data.userInfo.roles || [],
+            res.data.userInfo.permissions || [],
+          );
         }
+
         setIsSuccess(true);
         notify.success('登录成功');
         setTimeout(() => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Shield, Edit2, Trash2, Users, Key } from 'lucide-react';
 import { Role } from '../../../types';
 import DataTable, { PaginationConfig } from '../../../components/DataTable';
+import { useAuth } from '../../../context/AuthContext';
 
 interface RoleTableProps {
   roles: Role[];
@@ -28,6 +29,7 @@ const RoleTable: React.FC<RoleTableProps> = ({
   paginationConfig,
   t,
 }) => {
+  const { hasPermission } = useAuth();
   const columns = React.useMemo(
     () => [
       {
@@ -80,31 +82,35 @@ const RoleTable: React.FC<RoleTableProps> = ({
               <Users className="h-3.5 w-3.5" />
               {t('viewUsers')}
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(role);
-              }}
-              className="hover:bg-brand-500/10 hover:text-brand-500 rounded-lg p-2 text-slate-400 transition-all dark:text-slate-500"
-              title={t('edit')}
-            >
-              <Edit2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(role.id);
-              }}
-              className="hover:bg-cinnabar-500/10 hover:text-cinnabar-500 rounded-lg p-2 text-slate-400 transition-all dark:text-slate-500"
-              title={t('delete')}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {hasPermission('system:role:edit') && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(role);
+                }}
+                className="hover:bg-brand-500/10 hover:text-brand-500 rounded-lg p-2 text-slate-400 transition-all dark:text-slate-500"
+                title={t('edit')}
+              >
+                <Edit2 className="h-4 w-4" />
+              </button>
+            )}
+            {hasPermission('system:role:delete') && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(role.id);
+                }}
+                className="hover:bg-cinnabar-500/10 hover:text-cinnabar-500 rounded-lg p-2 text-slate-400 transition-all dark:text-slate-500"
+                title={t('delete')}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ),
       },
     ],
-    [t, onEdit, onDelete, onViewMembers],
+    [t, onEdit, onDelete, onViewMembers, hasPermission],
   );
 
   return (

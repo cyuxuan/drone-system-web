@@ -4,12 +4,14 @@ import { motion } from 'framer-motion';
 import { api } from '../../services/api';
 import { MenuItem } from '../../types';
 import { useAppContext } from '../../context';
+import { useAuth } from '../../context/AuthContext';
 import { getErrorType, ErrorType } from '../../utils/error';
 import MenuTree from './components/MenuTree';
 import MenuModal from './components/MenuModal';
 
 const MenuManagement = () => {
   const { t, showMessage, confirm } = useAppContext();
+  const { refreshMenus } = useAuth();
   const [menus, setMenus] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -62,30 +64,7 @@ const MenuManagement = () => {
     setErrorType(null);
     try {
       const data = await api.getMenu();
-      // 构建树形结构
-      const buildTree = (items: MenuItem[]): MenuItem[] => {
-        const itemMap = new Map<string, MenuItem & { children: MenuItem[] }>();
-        const roots: MenuItem[] = [];
-
-        // 1. 建立映射并初始化 children
-        items.forEach((item) => {
-          itemMap.set(item.id, { ...item, children: [] });
-        });
-
-        // 2. 填充层级关系
-        items.forEach((item) => {
-          const mappedItem = itemMap.get(item.id)!;
-          if (item.parentId && itemMap.has(item.parentId)) {
-            itemMap.get(item.parentId)!.children.push(mappedItem);
-          } else {
-            roots.push(mappedItem);
-          }
-        });
-
-        return roots;
-      };
-
-      setMenus(buildTree(data));
+      setMenus(data);
     } catch (error) {
       console.error('Failed to fetch menu:', error);
       setErrorType(getErrorType(error));
@@ -121,7 +100,8 @@ const MenuManagement = () => {
     try {
       await api.saveMenuItem(data);
       setIsModalOpen(false);
-      fetchData(true);
+      await fetchData(true);
+      await refreshMenus();
       showMessage({
         type: 'success',
         title: t('success'),
@@ -146,7 +126,8 @@ const MenuManagement = () => {
     if (isConfirmed) {
       try {
         await api.deleteMenuItem(id);
-        fetchData(true);
+        await fetchData(true);
+        await refreshMenus();
         showMessage({
           type: 'success',
           title: t('success'),

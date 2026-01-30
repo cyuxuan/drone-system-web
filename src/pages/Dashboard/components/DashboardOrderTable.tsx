@@ -87,10 +87,11 @@ const DashboardOrderTable: React.FC<DashboardOrderTableProps> = ({
         <div className="flex w-12 items-center justify-start">
           <button
             onClick={onSelectAll}
-            className={`rounded-lg p-2 transition-all ${allSelected
+            className={`rounded-lg p-2 transition-all ${
+              allSelected
                 ? 'text-brand-500 bg-brand-500/10'
                 : 'text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+            }`}
           >
             {allSelected ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
           </button>
@@ -126,8 +127,9 @@ const DashboardOrderTable: React.FC<DashboardOrderTableProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className={`group border-brand-500/5 relative flex items-center overflow-hidden border-b px-10 py-5 transition-all ${isSelected ? 'bg-brand-500/3' : 'hover:bg-slate-50/50 dark:hover:bg-slate-900/30'
-                  }`}
+                className={`group border-brand-500/5 relative flex items-center overflow-hidden border-b px-10 py-5 transition-all ${
+                  isSelected ? 'bg-brand-500/3' : 'hover:bg-slate-50/50 dark:hover:bg-slate-900/30'
+                }`}
               >
                 {/* Active Scanning Line on Hover */}
                 <div className="bg-brand-500 absolute top-0 left-0 h-full w-1 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -135,10 +137,11 @@ const DashboardOrderTable: React.FC<DashboardOrderTableProps> = ({
                 <div className="z-10 flex w-12 items-center justify-start">
                   <button
                     onClick={() => onToggleSelect(order.planNo)}
-                    className={`rounded-lg p-2 transition-all ${isSelected
+                    className={`rounded-lg p-2 transition-all ${
+                      isSelected
                         ? 'text-brand-500 bg-brand-500/10 scale-110 shadow-sm'
                         : 'hover:text-brand-500/60 text-slate-300 dark:text-slate-700'
-                      }`}
+                    }`}
                   >
                     {isSelected ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                   </button>
@@ -149,14 +152,16 @@ const DashboardOrderTable: React.FC<DashboardOrderTableProps> = ({
                   <div className="col-span-2">
                     <div className="flex items-center gap-2">
                       <Target
-                        className={`h-3 w-3 ${isSelected ? 'text-brand-500 animate-pulse' : 'text-slate-300'
-                          }`}
+                        className={`h-3 w-3 ${
+                          isSelected ? 'text-brand-500 animate-pulse' : 'text-slate-300'
+                        }`}
                       />
                       <span
-                        className={`rounded-md border px-2 py-1 font-mono text-[11px] font-black tracking-tighter uppercase transition-colors ${isSelected
+                        className={`rounded-md border px-2 py-1 font-mono text-[11px] font-black tracking-tighter uppercase transition-colors ${
+                          isSelected
                             ? 'bg-brand-500/10 border-brand-500/20 text-brand-600'
                             : 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                          }`}
+                        }`}
                       >
                         {order.orderNumber}
                       </span>
@@ -192,24 +197,26 @@ const DashboardOrderTable: React.FC<DashboardOrderTableProps> = ({
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <div
-                          className={`h-2 w-2 rounded-full ${order.status === OrderStatus.COMPLETED
+                          className={`h-2 w-2 rounded-full ${
+                            order.status === OrderStatus.COMPLETED
                               ? 'bg-emerald-500'
                               : order.status === OrderStatus.IN_PROGRESS
                                 ? 'bg-brand-500 animate-pulse'
                                 : 'bg-slate-400'
-                            }`}
+                          }`}
                         />
                         {order.status === OrderStatus.IN_PROGRESS && (
                           <div className="bg-brand-500 absolute inset-0 scale-150 animate-ping rounded-full opacity-40" />
                         )}
                       </div>
                       <span
-                        className={`text-[9px] font-black tracking-[0.2em] uppercase ${order.status === OrderStatus.COMPLETED
+                        className={`text-[9px] font-black tracking-[0.2em] uppercase ${
+                          order.status === OrderStatus.COMPLETED
                             ? 'text-emerald-500'
                             : order.status === OrderStatus.IN_PROGRESS
                               ? 'text-brand-500'
                               : 'text-slate-400'
-                          }`}
+                        }`}
                       >
                         {order.status}
                       </span>

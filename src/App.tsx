@@ -22,62 +22,394 @@ import {
   ChevronRight,
   Languages,
 } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { translations, Language, TranslationKey } from './i18n';
-import { INITIAL_MENU, ICON_MAP } from './constants';
+import { MenuItem } from './types';
 import { AppContext, useAppContext, MessageOptions } from './context';
 import MessageModal from './components/MessageModal';
 import NotificationContainer from './components/NotificationContainer';
 import ErrorBoundary from './components/ErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import { perfMonitor, PerformanceMetrics } from './utils/performance';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
+import { protectedRoutes } from './routes';
 
 const Login = lazy(() => import('./pages/Login'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const UserManagement = lazy(() => import('./pages/UserManagement'));
-const RoleManagement = lazy(() => import('./pages/RoleManagement'));
-const AuditLogs = lazy(() => import('./pages/AuditLogs'));
-const MenuManagement = lazy(() => import('./pages/MenuManagement'));
-const OrderManagement = lazy(() => import('./pages/OrderManagement'));
-const ProjectManagement = lazy(() => import('./pages/ProjectManagement'));
-const ProjectCategory = lazy(() => import('./pages/ProjectCategory'));
-const VisualDashboard = lazy(() => import('./pages/VisualDashboard'));
-const CustomerManagement = lazy(() => import('./pages/CustomerManagement'));
-const ServiceHall = lazy(() => import('./pages/ServiceHall'));
+
+type MenuNode = Omit<MenuItem, 'children'> & { children: MenuNode[] };
+
+const normalizeMenuId = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  return String(value);
+};
+
+const normalizeIconName = (iconName?: string): IconName => {
+  if (!iconName) return 'terminal';
+  const normalized = iconName.replace(/Icon$/, '');
+  return normalized
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/_/g, '-')
+    .replace(/\s+/g, '-')
+    .toLowerCase() as IconName;
+};
+
+const flattenMenus = (menus: MenuItem[]): MenuItem[] => {
+  const flattened: MenuItem[] = [];
+
+  const walk = (items: MenuItem[], fallbackParentId?: string) => {
+    items.forEach((item) => {
+      const id = normalizeMenuId(item.id);
+      const parentId =
+        item.parentId !== undefined && item.parentId !== null
+          ? normalizeMenuId(item.parentId)
+          : fallbackParentId;
+
+      flattened.push({
+        ...item,
+        id,
+        parentId: parentId || undefined,
+      });
+
+      if (item.children && item.children.length > 0) {
+        walk(item.children, id);
+      }
+    });
+  };
+
+  walk(menus);
+  return flattened;
+};
+
+const isPathActive = (path: string, currentPath: string) => {
+  if (!path) return false;
+  if (path === '/') return currentPath === '/';
+  return currentPath === path || currentPath.startsWith(path + '/');
+};
+
+const buildMenuIndex = (items: MenuItem[]) => {
+  const byId = new Map<string, MenuItem>();
+  const parentById = new Map<string, string>();
+  const childrenByParent = new Map<string, MenuItem[]>();
+  const roots: MenuItem[] = [];
+
+  items.forEach((item) => {
+    if (!item.id) return;
+    byId.set(item.id, item);
+
+    const parentId = item.parentId && item.parentId !== '0' ? item.parentId : '';
+    if (parentId) {
+      parentById.set(item.id, parentId);
+      const list = childrenByParent.get(parentId) || [];
+      list.push(item);
+      childrenByParent.set(parentId, list);
+    } else {
+      roots.push(item);
+    }
+  });
+
+  return { byId, parentById, childrenByParent, roots };
+};
+
+const findActiveItemId = (items: MenuItem[], pathname: string): string | null => {
+  let best: MenuItem | null = null;
+  for (const item of items) {
+    if (!item.path) continue;
+    if (!isPathActive(item.path, pathname)) continue;
+    if (!best || item.path.length > best.path.length) best = item;
+  }
+  return best?.id || null;
+};
+
+const collectAncestorIds = (activeItemId: string | null, parentById: Map<string, string>) => {
+  if (!activeItemId) return [];
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  let current = parentById.get(activeItemId);
+  while (current && current !== '0' && !seen.has(current)) {
+    seen.add(current);
+    ids.push(current);
+    current = parentById.get(current);
+  }
+  return ids;
+};
+
+const buildMenuTree = (
+  roots: MenuItem[],
+  childrenByParent: Map<string, MenuItem[]>,
+): MenuNode[] => {
+  const build = (item: MenuItem, seen: Set<string>): MenuNode | null => {
+    if (!item.id) return null;
+    if (seen.has(item.id)) return { ...item, children: [] };
+
+    const nextSeen = new Set(seen);
+    nextSeen.add(item.id);
+    const children = (childrenByParent.get(item.id) || [])
+      .map((child) => build(child, nextSeen))
+      .filter(Boolean) as MenuNode[];
+
+    if (children.length === 0 && !item.path) return null;
+    return { ...item, children };
+  };
+
+  return roots.map((root) => build(root, new Set())).filter(Boolean) as MenuNode[];
+};
+
+const useSidebarModel = ({
+  menus,
+  pathname,
+  hasPermission,
+  openMenus,
+}: {
+  menus: MenuItem[];
+  pathname: string;
+  hasPermission: (permission: string) => boolean;
+  openMenus: string[];
+}) => {
+  const allMenus = useMemo(() => flattenMenus(menus), [menus]);
+
+  const filteredItems = useMemo(() => {
+    return allMenus.filter((m) => !(m.permission && !hasPermission(m.permission)));
+  }, [allMenus, hasPermission]);
+
+  const menuIndex = useMemo(() => buildMenuIndex(filteredItems), [filteredItems]);
+
+  const activeItemId = useMemo(
+    () => findActiveItemId(filteredItems, pathname),
+    [filteredItems, pathname],
+  );
+
+  const activeAncestorIds = useMemo(
+    () => collectAncestorIds(activeItemId, menuIndex.parentById),
+    [activeItemId, menuIndex.parentById],
+  );
+
+  const activeIdSet = useMemo(() => {
+    const set = new Set<string>();
+    if (activeItemId) set.add(activeItemId);
+    activeAncestorIds.forEach((id) => set.add(id));
+    return set;
+  }, [activeAncestorIds, activeItemId]);
+
+  const openMenuSet = useMemo(() => {
+    const set = new Set<string>();
+    openMenus.forEach((id) => set.add(id));
+    activeAncestorIds.forEach((id) => set.add(id));
+    return set;
+  }, [activeAncestorIds, openMenus]);
+
+  const menuTree = useMemo(
+    () => buildMenuTree(menuIndex.roots, menuIndex.childrenByParent),
+    [menuIndex.childrenByParent, menuIndex.roots],
+  );
+
+  return { menuTree, activeIdSet, openMenuSet };
+};
+
+const getUserInitials = (
+  user: { nickname?: string; username?: string; userId?: string } | null | undefined,
+) => {
+  const raw =
+    (typeof user?.nickname === 'string' && user.nickname.trim()) ||
+    (typeof user?.username === 'string' && user.username.trim()) ||
+    (typeof user?.userId === 'string' && user.userId.trim()) ||
+    '';
+  if (!raw) return '??';
+  return raw.slice(0, 3).toUpperCase();
+};
+
+const getRoleLabel = (roles: string[] | undefined, t: (key: TranslationKey | string) => string) => {
+  if (!roles || roles.length === 0) return t('client');
+  if (roles.includes('admin') || roles.includes('ADMIN')) return t('commander');
+  if (roles.includes('dispatcher')) return t('dispatcher');
+  if (roles.includes('pilot')) return t('pilot');
+  return roles[0].toUpperCase();
+};
+
+const SidebarTreeItem = ({
+  item,
+  depth,
+  t,
+  openMenuSet,
+  activeIdSet,
+  onToggleMenu,
+}: {
+  item: MenuNode;
+  depth: number;
+  t: (key: TranslationKey | string) => string;
+  openMenuSet: Set<string>;
+  activeIdSet: Set<string>;
+  onToggleMenu: (id: string) => void;
+}) => {
+  const iconName = normalizeIconName(item.icon);
+  const hasChildren = item.children.length > 0;
+  const isExpanded = openMenuSet.has(item.id);
+  const isActive = activeIdSet.has(item.id);
+
+  const rowClassName =
+    depth === 0
+      ? hasChildren
+        ? `group flex w-full items-center gap-4 rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'bg-brand-500/10 border-brand-500/20 text-brand-600 dark:text-brand-400' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'}`
+        : `group relative flex w-full items-center gap-4 overflow-hidden rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'}`
+      : `group flex w-full items-center gap-4 rounded-2xl border px-5 py-4 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'}`;
+
+  if (hasChildren) {
+    return (
+      <div>
+        <button onClick={() => onToggleMenu(item.id)} className={rowClassName}>
+          <DynamicIcon
+            name={iconName}
+            className={
+              depth === 0 ? 'h-5 w-5 transition-transform group-hover:scale-110' : 'h-4 w-4'
+            }
+          />
+          <span
+            className={
+              depth === 0
+                ? 'flex-1 text-left text-[12px] font-black tracking-widest uppercase'
+                : 'text-[10px] font-black tracking-widest uppercase'
+            }
+          >
+            {t(item.label)}
+          </span>
+          {depth === 0 && (
+            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </motion.div>
+          )}
+          {depth > 0 && <ChevronRight className="h-3 w-3 opacity-40" />}
+        </button>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="border-brand-500/10 mt-2 space-y-1 overflow-hidden border-l-2 pl-2"
+              style={{ marginLeft: 18 + depth * 18 }}
+            >
+              {item.children.map((child) => (
+                <SidebarTreeItem
+                  key={child.id}
+                  item={child}
+                  depth={depth + 1}
+                  t={t}
+                  openMenuSet={openMenuSet}
+                  activeIdSet={activeIdSet}
+                  onToggleMenu={onToggleMenu}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+    <Link to={item.path} className={rowClassName}>
+      <DynamicIcon
+        name={iconName}
+        className={depth === 0 ? 'h-5 w-5 transition-transform group-hover:rotate-12' : 'h-4 w-4'}
+      />
+      {depth === 0 && (
+        <>
+          <span className="text-[12px] font-black tracking-widest uppercase">{t(item.label)}</span>
+          {isActive && (
+            <motion.div
+              layoutId="sidebar-pill"
+              className="ml-auto h-2 w-2 rounded-full bg-white shadow-lg"
+            />
+          )}
+        </>
+      )}
+      {depth > 0 && (
+        <span className="text-[10px] font-black tracking-widest uppercase">{t(item.label)}</span>
+      )}
+    </Link>
+  );
+};
+
+const HoverTree = ({
+  item,
+  depth,
+  t,
+  activeIdSet,
+  onClose,
+}: {
+  item: MenuNode;
+  depth: number;
+  t: (key: TranslationKey | string) => string;
+  activeIdSet: Set<string>;
+  onClose: () => void;
+}) => {
+  const iconName = normalizeIconName(item.icon);
+  const isActive = activeIdSet.has(item.id);
+  const hasChildren = item.children.length > 0;
+
+  const baseClassName = `flex items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-[0_0_15px_rgba(20,184,166,0.4)]' : 'hover:bg-brand-500/10 hover:text-brand-600 border-transparent text-slate-500 dark:text-slate-400'}`;
+  const content = (
+    <div className="flex items-center gap-3" style={{ paddingLeft: depth > 0 ? depth * 10 : 0 }}>
+      <DynamicIcon
+        name={iconName}
+        className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-500/60'}`}
+      />
+      <span className="text-[10px] font-black tracking-widest uppercase">{t(item.label)}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-1">
+      {item.path ? (
+        <Link to={item.path} onClick={onClose} className={baseClassName}>
+          {content}
+          <ChevronRight
+            className={`h-3 w-3 transition-all ${isActive ? 'text-white' : 'opacity-40'}`}
+          />
+        </Link>
+      ) : (
+        <div className={baseClassName}>
+          {content}
+          {hasChildren && <ChevronRight className="h-3 w-3 opacity-40" />}
+        </div>
+      )}
+      {hasChildren && (
+        <div className="space-y-1">
+          {item.children.map((child) => (
+            <HoverTree
+              key={child.id}
+              item={child}
+              depth={depth + 1}
+              t={t}
+              activeIdSet={activeIdSet}
+              onClose={onClose}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Sidebar = () => {
   const { t, isSidebarCollapsed, setIsSidebarCollapsed } = useAppContext();
+  const { hasPermission, menus, user, roles } = useAuth();
   const location = useLocation();
-  const [openMenus, setOpenMenus] = useState<string[]>(() => {
-    const activeItem = INITIAL_MENU.find(
-      (m) =>
-        m.parentId && (m.path === location.pathname || location.pathname.startsWith(m.path + '/')),
-    );
-    return activeItem?.parentId ? [activeItem.parentId] : [];
-  });
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [hoveredMenuId, setHoveredMenuId] = useState<string | null>(null);
-  const [prevPathname, setPrevPathname] = useState(location.pathname);
-
-  // Automatically expand the menu containing the current route when path changes
-  if (location.pathname !== prevPathname) {
-    setPrevPathname(location.pathname);
-    const activeItem = INITIAL_MENU.find(
-      (m) =>
-        m.parentId && (m.path === location.pathname || location.pathname.startsWith(m.path + '/')),
-    );
-    setOpenMenus(activeItem?.parentId ? [activeItem.parentId] : []);
-  }
-
-  const menuTree = useMemo(() => {
-    const roots = INITIAL_MENU.filter((m) => !m.parentId);
-    return roots.map((root) => ({
-      ...root,
-      children: INITIAL_MENU.filter((m) => m.parentId === root.id),
-    }));
+  const toggleMenu = useCallback((id: string) => {
+    setOpenMenus((prev) => (prev.includes(id) ? prev.filter((mid) => mid !== id) : [...prev, id]));
   }, []);
 
-  const toggleMenu = (id: string) => {
-    setOpenMenus((prev) => (prev.includes(id) ? prev.filter((mid) => mid !== id) : [...prev, id]));
-  };
+  const { menuTree, activeIdSet, openMenuSet } = useSidebarModel({
+    menus,
+    pathname: location.pathname,
+    hasPermission,
+    openMenus,
+  });
+
+  const userInitials = useMemo(() => getUserInitials(user), [user]);
+  const roleLabel = useMemo(() => getRoleLabel(roles, t), [roles, t]);
 
   return (
     <motion.aside
@@ -156,12 +488,9 @@ const Sidebar = () => {
         className={`flex-1 ${isSidebarCollapsed ? 'flex flex-col items-center overflow-visible' : 'overflow-y-auto'} custom-scrollbar space-y-3 px-4 py-6`}
       >
         {menuTree.map((item) => {
-          const Icon = ICON_MAP[item.icon];
+          const iconName = normalizeIconName(item.icon);
+          const isActive = activeIdSet.has(item.id);
           const hasChildren = item.children.length > 0;
-          const isExpanded = openMenus.includes(item.id);
-          const isActive =
-            location.pathname === item.path ||
-            item.children.some((c) => c.path === location.pathname);
 
           return (
             <div
@@ -169,7 +498,6 @@ const Sidebar = () => {
               className="group/navitem relative"
               onMouseEnter={() => isSidebarCollapsed && setHoveredMenuId(item.id)}
             >
-              {/* Collapsed State Hover Pod (Tactical Floating Pod) */}
               {isSidebarCollapsed && (
                 <AnimatePresence>
                   {hoveredMenuId === item.id && (
@@ -181,10 +509,9 @@ const Sidebar = () => {
                       onMouseEnter={() => setHoveredMenuId(item.id)}
                       onMouseLeave={() => setHoveredMenuId(null)}
                     >
-                      {/* Interaction Bridge: ensures hover state is maintained */}
                       <div className="absolute top-0 bottom-0 -left-4 w-4 bg-transparent" />
 
-                      <div className="glass-hud border-brand-500/30 streaming-border min-w-[240px] overflow-hidden rounded-4xl border-2 p-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+                      <div className="glass-hud border-brand-500/30 streaming-border min-w-[260px] overflow-hidden rounded-4xl border-2 p-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
                         <div className="border-brand-500/10 bg-brand-500/5 mb-1 border-b px-5 py-4">
                           <span className="text-[11px] font-black tracking-widest text-slate-900 uppercase dark:text-white">
                             {t(item.label)}
@@ -196,43 +523,13 @@ const Sidebar = () => {
                           )}
                         </div>
                         <div className="space-y-1 p-1">
-                          {hasChildren ? (
-                            item.children.map((child) => {
-                              const ChildIcon = ICON_MAP[child.icon];
-                              const isChildActive = location.pathname === child.path;
-                              return (
-                                <Link
-                                  key={child.id}
-                                  to={child.path}
-                                  onClick={() => setHoveredMenuId(null)}
-                                  className={`flex items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 transition-all duration-300 outline-none ${isChildActive ? 'btn-jade text-white shadow-[0_0_15px_rgba(20,184,166,0.4)]' : 'hover:bg-brand-500/10 hover:text-brand-600 border-transparent text-slate-500 dark:text-slate-400'}`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <ChildIcon
-                                      className={`h-3.5 w-3.5 ${isChildActive ? 'text-white' : 'text-brand-500/60'}`}
-                                    />
-                                    <span className="text-[10px] font-black tracking-widest uppercase">
-                                      {t(child.label)}
-                                    </span>
-                                  </div>
-                                  <ChevronRight
-                                    className={`h-3 w-3 transition-all ${isChildActive ? 'text-white' : 'opacity-0 group-hover/sub:translate-x-1 group-hover/sub:opacity-100'}`}
-                                  />
-                                </Link>
-                              );
-                            })
-                          ) : (
-                            <Link
-                              to={item.path}
-                              onClick={() => setHoveredMenuId(null)}
-                              className={`flex items-center gap-3 rounded-2xl border px-5 py-3.5 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white' : 'hover:bg-brand-500/10 border-transparent text-slate-500 dark:text-slate-400'}`}
-                            >
-                              <Icon className="h-4 w-4" />
-                              <span className="text-[10px] font-black tracking-widest uppercase">
-                                {t('directAccessConsole')}
-                              </span>
-                            </Link>
-                          )}
+                          <HoverTree
+                            item={item}
+                            depth={0}
+                            t={t}
+                            activeIdSet={activeIdSet}
+                            onClose={() => setHoveredMenuId(null)}
+                          />
                         </div>
                       </div>
                     </motion.div>
@@ -240,70 +537,43 @@ const Sidebar = () => {
                 </AnimatePresence>
               )}
 
-              {/* Normal Sidebar Content */}
-              {hasChildren && !isSidebarCollapsed ? (
-                <div>
+              {isSidebarCollapsed ? (
+                hasChildren || !item.path ? (
                   <button
-                    onClick={() => toggleMenu(item.id)}
-                    className={`group flex w-full items-center gap-4 rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'bg-brand-500/10 border-brand-500/20 text-brand-600 dark:text-brand-400' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'}`}
+                    className={`group relative flex items-center gap-4 overflow-hidden rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'} mx-auto w-16 justify-center px-0`}
+                    onClick={() => setHoveredMenuId((prev) => (prev === item.id ? null : item.id))}
                   >
-                    <Icon className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    <span className="flex-1 text-left text-[12px] font-black tracking-widest uppercase">
-                      {t(item.label)}
-                    </span>
-                    <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </motion.div>
-                  </button>
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="border-brand-500/10 mt-2 ml-6 space-y-1 overflow-hidden border-l-2 pl-2"
-                      >
-                        {item.children.map((child) => {
-                          const ChildIcon = ICON_MAP[child.icon];
-                          const isChildActive = location.pathname === child.path;
-                          return (
-                            <Link
-                              key={child.id}
-                              to={child.path}
-                              className={`group flex items-center gap-4 rounded-2xl border px-5 py-4 transition-all duration-300 outline-none ${isChildActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'}`}
-                            >
-                              <ChildIcon className="h-4 w-4" />
-                              <span className="text-[10px] font-black tracking-widest uppercase">
-                                {t(child.label)}
-                              </span>
-                            </Link>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <Link
-                  to={item.path}
-                  className={`group relative flex items-center gap-4 overflow-hidden rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'} ${isSidebarCollapsed ? 'mx-auto w-16 justify-center px-0' : ''}`}
-                >
-                  <Icon className={`h-5 w-5 transition-transform group-hover:rotate-12`} />
-                  {!isSidebarCollapsed && (
-                    <span className="text-[12px] font-black tracking-widest uppercase">
-                      {t(item.label)}
-                    </span>
-                  )}
-                  {!isSidebarCollapsed && isActive && (
-                    <motion.div
-                      layoutId="sidebar-pill"
-                      className="ml-auto h-2 w-2 rounded-full bg-white shadow-lg"
+                    <DynamicIcon
+                      name={iconName}
+                      className="h-5 w-5 transition-transform group-hover:rotate-12"
                     />
-                  )}
-                  {isSidebarCollapsed && isActive && (
-                    <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-white" />
-                  )}
-                </Link>
+                    {isActive && (
+                      <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-white" />
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    to={item.path}
+                    className={`group relative flex items-center gap-4 overflow-hidden rounded-3xl border px-6 py-4 transition-all duration-300 outline-none ${isActive ? 'btn-jade text-white shadow-lg' : 'hover:bg-brand-500/5 border-transparent text-slate-500 dark:text-slate-400'} mx-auto w-16 justify-center px-0`}
+                  >
+                    <DynamicIcon
+                      name={iconName}
+                      className="h-5 w-5 transition-transform group-hover:rotate-12"
+                    />
+                    {isActive && (
+                      <div className="absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-full bg-white" />
+                    )}
+                  </Link>
+                )
+              ) : (
+                <SidebarTreeItem
+                  item={item}
+                  depth={0}
+                  t={t}
+                  openMenuSet={openMenuSet}
+                  activeIdSet={activeIdSet}
+                  onToggleMenu={toggleMenu}
+                />
               )}
             </div>
           );
@@ -317,16 +587,16 @@ const Sidebar = () => {
           <div className="group relative">
             <div className="bg-brand-500/20 absolute -inset-2 animate-pulse rounded-full opacity-0 blur-lg transition-opacity group-hover:opacity-100"></div>
             <div className="border-brand-500/20 text-brand-600 dark:text-brand-400 group-hover:border-brand-500/50 relative flex h-11 w-11 items-center justify-center rounded-full border bg-white text-[10px] font-black shadow-lg transition-all dark:bg-slate-900">
-              ADM
+              {userInitials}
             </div>
           </div>
           {!isSidebarCollapsed && (
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-[11px] font-black tracking-widest text-slate-900 uppercase dark:text-slate-100">
-                Overwatch_01
+                {user?.nickname || user?.username || 'Overwatch_01'}
               </p>
               <p className="mt-1.5 text-[8px] font-black tracking-[0.2em] text-slate-500 uppercase opacity-80 dark:text-slate-500">
-                {t('skylineCommander')}
+                {roleLabel}
               </p>
             </div>
           )}
@@ -347,6 +617,7 @@ const Header = () => {
     setIsSearchOpen,
     confirm,
   } = useAppContext();
+  const { logout } = useAuth();
   const [metrics, setMetrics] = useState<PerformanceMetrics>(perfMonitor.getMetrics());
   const navigate = useNavigate();
 
@@ -364,8 +635,7 @@ const Header = () => {
     });
 
     if (isConfirmed) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      logout();
       navigate('/login');
     }
   };
@@ -514,21 +784,11 @@ const Header = () => {
 const AppContent = () => {
   const location = useLocation();
   const { isSidebarCollapsed, t } = useAppContext();
-
-  const token = localStorage.getItem('token');
+  const { user } = useAuth();
   const isLoginPage = location.pathname === '/login';
 
-  // 1. 未登录且不在登录页 -> 跳转登录页
-  if (!token && !isLoginPage) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // 2. 已登录且在登录页 -> 跳转首页
-  if (token && isLoginPage) {
-    return <Navigate to="/" replace />;
-  }
-
   if (isLoginPage) {
+    if (user) return <Navigate to="/" replace />;
     return (
       <ErrorBoundary t={t}>
         <Suspense
@@ -579,17 +839,17 @@ const AppContent = () => {
                   }
                 >
                   <Routes location={location}>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/system/users" element={<UserManagement />} />
-                    <Route path="/system/roles" element={<RoleManagement />} />
-                    <Route path="/system/logs" element={<AuditLogs />} />
-                    <Route path="/system/menu" element={<MenuManagement />} />
-                    <Route path="/system/customers" element={<CustomerManagement />} />
-                    <Route path="/services/orders" element={<OrderManagement />} />
-                    <Route path="/services/hall" element={<ServiceHall />} />
-                    <Route path="/services/projects" element={<ProjectManagement />} />
-                    <Route path="/services/categories" element={<ProjectCategory />} />
-                    <Route path="/services/visual-dashboard" element={<VisualDashboard />} />
+                    {protectedRoutes.map(({ path, Component, permission, role }) => (
+                      <Route
+                        key={path}
+                        path={path}
+                        element={
+                          <ProtectedRoute permission={permission} role={role}>
+                            <Component />
+                          </ProtectedRoute>
+                        }
+                      />
+                    ))}
                     {/* Catch-all redirect to ensure Console is default */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

@@ -150,7 +150,7 @@ const Dashboard = () => {
     try {
       for (const id of selectedIds) {
         // Find the order to get its actual numeric id for saveOrder
-        const order = orders.find(o => o.planNo === id);
+        const order = orders.find((o) => o.planNo === id);
         if (order) {
           await api.saveOrder({ id: order.id, status: newStatus });
         }

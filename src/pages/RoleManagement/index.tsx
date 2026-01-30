@@ -2,16 +2,18 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Shield, Zap, Plus, Search, Users, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api } from '../../services/api';
-import { Role, User } from '../../types';
+import { Role, User, Permission } from '../../types';
 import { useAppContext } from '../../context';
 import { getErrorType, ErrorType } from '../../utils/error';
 import RoleTable from './components/RoleTable';
 import RoleModal from './components/RoleModal';
 import Modal from '../../components/Modal';
+import HasPermission from '../../components/HasPermission';
 
 const RoleManagement = () => {
   const { t, showMessage, confirm } = useAppContext();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
@@ -38,16 +40,20 @@ const RoleManagement = () => {
     if (!isSilent) setLoading(true);
     setErrorType(null);
     try {
-      const data = await api.getRoles();
+      const [rolesData, permissionsData] = await Promise.all([
+        api.getRoles(),
+        api.getPermissions(),
+      ]);
       // 将后端数据格式转换为前端格式
-      const mappedRoles = data.map((role) => ({
+      const mappedRoles = rolesData.map((role) => ({
         ...role,
         id: role.roleId || role.id,
         name: role.roleName || role.name,
       }));
       setRoles(mappedRoles);
+      setAllPermissions(permissionsData);
     } catch (error) {
-      console.error('Failed to fetch roles:', error);
+      console.error('Failed to fetch roles and permissions:', error);
       setErrorType(getErrorType(error));
     } finally {
       setLoading(false);
@@ -177,14 +183,16 @@ const RoleManagement = () => {
               className="input-tactical-small w-full rounded-2xl py-3 pr-4 pl-10 text-xs font-black tracking-widest text-slate-900 outline-none dark:text-white"
             />
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleOpenAdd}
-            className="btn-jade flex shrink-0 items-center gap-3 rounded-2xl px-8 py-3 text-[10px] font-black tracking-[0.2em] uppercase shadow-lg"
-          >
-            <Plus className="h-4 w-4" /> {t('createRole')}
-          </motion.button>
+          <HasPermission permission="system:role:add">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleOpenAdd}
+              className="btn-jade flex shrink-0 items-center gap-3 rounded-2xl px-8 py-3 text-[10px] font-black tracking-[0.2em] uppercase shadow-lg"
+            >
+              <Plus className="h-4 w-4" /> {t('createRole')}
+            </motion.button>
+          </HasPermission>
         </div>
       </div>
 
@@ -221,6 +229,7 @@ const RoleManagement = () => {
         setFormData={setFormData}
         onSave={handleSave}
         isSaving={isSaving}
+        allPermissions={allPermissions}
       />
 
       <Modal
@@ -278,7 +287,7 @@ const RoleManagement = () => {
                     </div>
                   </div>
                   <div
-                    className={`h-1.5 w-1.5 rounded-full ${member.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                    className={`h-1.5 w-1.5 rounded-full ${member.status === 0 ? 'bg-emerald-500' : 'bg-slate-300'}`}
                   />
                 </div>
               ))

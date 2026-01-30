@@ -101,17 +101,11 @@ const ProjectManagement = () => {
     fetchData();
   }, [fetchData]);
 
-  // Map category info for easy access
-  const categoryInfo = useMemo(() => {
-    const map: Record<string, ProjectType> = {};
-    categories.forEach((c) => {
-      map[c.typeNo] = c;
-    });
-    return map;
-  }, [categories]);
-
   const typeConfigMapping = useMemo(() => {
-    const config: Record<string, { icon: LucideIcon; gradient: string; text: string; labelKey: string }> = {};
+    const config: Record<
+      string,
+      { icon: LucideIcon; gradient: string; text: string; labelKey: string }
+    > = {};
     categories.forEach((c) => {
       config[c.typeNo] = CATEGORY_MAP[c.category] || CATEGORY_MAP[1];
     });

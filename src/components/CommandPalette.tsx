@@ -8,26 +8,38 @@ import {
   LogOut,
   Sun,
   Moon,
-  LayoutDashboard,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context';
-import { INITIAL_MENU, ICON_MAP } from '../constants';
+import { useAuth } from '../context/AuthContext';
+import { MenuItem } from '../types';
 
 interface SearchItem {
   id: string;
   title: string;
   description?: string;
-  icon: LucideIcon;
+  icon: LucideIcon | string;
   category: string;
   action: () => void;
   shortcut?: string[];
 }
 
+const normalizeIconName = (iconName?: string): IconName => {
+  if (!iconName) return 'layout-dashboard';
+  const normalized = iconName.replace(/Icon$/, '');
+  return normalized
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/_/g, '-')
+    .replace(/\s+/g, '-')
+    .toLowerCase() as IconName;
+};
+
 const CommandPalette: React.FC = () => {
   const { isSearchOpen, setIsSearchOpen, t, theme, setTheme } = useAppContext();
+  const { menus, hasPermission } = useAuth();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
@@ -64,20 +76,31 @@ const CommandPalette: React.FC = () => {
     const searchItems: SearchItem[] = [];
 
     // Add Pages from Menu
-    INITIAL_MENU.forEach((menu) => {
-      const Icon = ICON_MAP[menu.icon] || LayoutDashboard;
-      searchItems.push({
-        id: `page-${menu.id}`,
-        title: t(menu.label),
-        description: menu.path,
-        icon: Icon,
-        category: t('consoleModule'),
-        action: () => {
-          navigate(menu.path);
-          setIsSearchOpen(false);
-        },
+    const addMenuItems = (menuList: MenuItem[]) => {
+      menuList.forEach((menu) => {
+        // Check permission if it exists
+        if (menu.permission && !hasPermission(menu.permission)) return;
+
+        searchItems.push({
+          id: `page-${menu.id}`,
+          title: t(menu.label),
+          description: menu.path,
+          icon: menu.icon || 'layout-dashboard',
+          category: t('consoleModule'),
+          action: () => {
+            navigate(menu.path);
+            setIsSearchOpen(false);
+          },
+        });
+
+        // Recursively add children
+        if (menu.children && menu.children.length > 0) {
+          addMenuItems(menu.children);
+        }
       });
-    });
+    };
+
+    addMenuItems(menus);
 
     // Add Quick Actions
     searchItems.push({
@@ -106,7 +129,7 @@ const CommandPalette: React.FC = () => {
     });
 
     return searchItems;
-  }, [t, theme, navigate, setIsSearchOpen, setTheme]);
+  }, [t, theme, navigate, setIsSearchOpen, setTheme, menus, hasPermission]);
 
   const filteredItems = useMemo<SearchItem[]>(() => {
     if (!query) return items;
@@ -209,7 +232,11 @@ const CommandPalette: React.FC = () => {
                         : 'bg-brand-500/5 text-brand-500 group-hover:bg-brand-500/10'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    {typeof Icon === 'string' ? (
+                      <DynamicIcon name={normalizeIconName(Icon)} className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </div>
 
                   <div className="flex-1">

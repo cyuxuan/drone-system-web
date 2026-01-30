@@ -37,12 +37,13 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
         header: t('projectTitle'),
         className: 'pl-4',
         render: (p: DroneProject) => {
-          const config = typeConfig[p.typeNo] || Object.values(typeConfig)[0] || {
-            icon: Package,
-            gradient: 'from-slate-400/10 to-slate-600/10',
-            text: 'text-slate-600 dark:text-slate-400',
-            labelKey: 'unknown',
-          };
+          const config = typeConfig[p.typeNo] ||
+            Object.values(typeConfig)[0] || {
+              icon: Package,
+              gradient: 'from-slate-400/10 to-slate-600/10',
+              text: 'text-slate-600 dark:text-slate-400',
+              labelKey: 'unknown',
+            };
           return (
             <div className="flex items-center gap-4">
               <div

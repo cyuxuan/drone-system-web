@@ -19,8 +19,16 @@ export interface User {
   username: string;
   email: string;
   phone?: string;
+  nickname?: string;
+  location?: string;
+  userType?: string;
+  identity?: string;
+  source?: string;
+  loginType?: string;
   role: UserRole;
   status: number; // 0-正常, 1-禁用, 3-已删除
+  lastLoginTime?: string;
+  lastLoginIp?: string;
   createTime: string;
 }
 
@@ -49,6 +57,7 @@ export interface MenuItem {
   path: string;
   icon: string;
   parentId?: string;
+  permission?: string;
   actions?: MenuAction[];
   children?: MenuItem[];
 }
@@ -176,4 +185,31 @@ export interface DashboardStats {
   userSources: Array<{ name: string; value: number }>;
   liveFeed: Array<{ id: number; type: string; message: string; time: string; icon: string }>;
   systemHealth: Array<{ name: string; status: string; load: number }>;
+}
+
+export interface Permission {
+  id: string;
+  permissionName: string;
+  permissionCode: string;
+  module?: string;
+  description?: string;
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface Menu {
+  id?: number | string;
+  menuId?: string;
+  menuName: string;
+  menuCode: string;
+  parentId?: string;
+  path?: string;
+  component?: string;
+  icon?: string;
+  sortOrder?: number;
+  permissionId?: string;
+  remark?: string;
+  children?: Menu[];
+  createTime?: string;
+  updateTime?: string;
 }

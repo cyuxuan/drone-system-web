@@ -32,7 +32,7 @@ const ServiceHall = () => {
   }, []);
 
   const pilots = useMemo(
-    () => INITIAL_USERS.filter((u) => u.role === UserRole.PILOT && u.status === 'active'),
+    () => INITIAL_USERS.filter((u) => u.role === UserRole.PILOT && u.status === 0),
     [],
   );
 
@@ -241,7 +241,7 @@ const ServiceHall = () => {
               {activeTab === 'matches' && (
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                   {(filteredData as DroneOrder[]).map((order) => {
-                    const pilot = INITIAL_USERS.find((u) => u.id === order.pilotId);
+                    const pilot = INITIAL_USERS.find((u) => String(u.id) === order.pilotId);
                     return (
                       <div
                         key={order.id}

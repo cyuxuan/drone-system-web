@@ -34,26 +34,29 @@ const OrderManagement = () => {
     pilotName: '',
   });
 
-  const fetchOrders = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    setErrorType(null);
-    try {
-      const res = await api.getOrders({
-        page: currentPage,
-        pageSize: pageSize,
-        status: statusFilter === 'All' ? undefined : (statusFilter as number),
-        keyword: searchTerm || undefined,
-      });
-      setOrders(res.list);
-      setTotalItems(res.total);
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      setErrorType(getErrorType(error));
-    } finally {
-      setLoading(false);
-      setIsFirstLoad(false);
-    }
-  }, [currentPage, pageSize, statusFilter, searchTerm]);
+  const fetchOrders = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
+      setErrorType(null);
+      try {
+        const res = await api.getOrders({
+          page: currentPage,
+          pageSize: pageSize,
+          status: statusFilter === 'All' ? undefined : (statusFilter as number),
+          keyword: searchTerm || undefined,
+        });
+        setOrders(res.list);
+        setTotalItems(res.total);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+        setErrorType(getErrorType(error));
+      } finally {
+        setLoading(false);
+        setIsFirstLoad(false);
+      }
+    },
+    [currentPage, pageSize, statusFilter, searchTerm],
+  );
 
   useEffect(() => {
     fetchOrders();
@@ -125,7 +128,7 @@ const OrderManagement = () => {
       try {
         for (const id of selectedIds) {
           // Find the order to get planNo if id is numeric
-          const order = orders.find(o => o.id === id);
+          const order = orders.find((o) => o.id === id);
           if (order) {
             await api.deleteOrder(order.planNo);
           }
@@ -178,7 +181,7 @@ const OrderManagement = () => {
 
     if (isConfirmed) {
       try {
-        const order = orders.find(o => o.id === id);
+        const order = orders.find((o) => o.id === id);
         if (order) {
           await api.deleteOrder(order.planNo);
         }

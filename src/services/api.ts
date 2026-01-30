@@ -1,4 +1,3 @@
-import { INITIAL_MENU } from '../constants';
 import {
   User,
   Role,
@@ -11,6 +10,8 @@ import {
   Customer,
   UserRole,
   BackendOrder,
+  Permission,
+  Menu,
 } from '../types';
 interface BackendSysUser {
   id: number;
@@ -18,14 +19,19 @@ interface BackendSysUser {
   username: string;
   email: string;
   phone?: string;
+  nickname?: string;
+  userType?: string;
+  identity?: string;
+  source?: string;
+  loginType?: string;
   status: number;
+  lastLoginTime?: string;
+  lastLoginIp?: string;
   createTime: string;
 }
 import { httpClient, ApiResponse, PageData } from './httpClient';
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-let _menu = [...INITIAL_MENU];
 
 export const api = {
   // --- Dashboard Data ---
@@ -109,8 +115,15 @@ export const api = {
       username: u.username,
       email: u.email,
       phone: u.phone,
+      nickname: u.nickname,
+      userType: u.userType,
+      identity: u.identity,
+      source: u.source,
+      loginType: u.loginType,
       role: UserRole.ADMIN, // Default to ADMIN as backend doesn't store roles yet
       status: u.status,
+      lastLoginTime: u.lastLoginTime,
+      lastLoginIp: u.lastLoginIp,
       createTime: u.createTime,
     }));
 
@@ -126,6 +139,9 @@ export const api = {
       username: user.username,
       email: user.email,
       phone: user.phone,
+      nickname: user.nickname,
+      userType: user.userType,
+      identity: user.identity,
       status: user.status ?? 0,
       // For add, we might need a default password if not provided
       passwordHash: (user as { password?: string }).password || '123456',
@@ -184,26 +200,41 @@ export const api = {
   },
 
   // --- Menu ---
-  getMenu: async () => {
-    await delay(400);
-    return [..._menu];
+  getMenu: async (): Promise<MenuItem[]> => {
+    const res = await httpClient.get<ApiResponse<Menu[]>>('/admin/menu/user/tree');
+    if (!res.data) return [];
+
+    const mapMenuToItem = (menu: Menu): MenuItem => ({
+      id: menu.menuId || String(menu.id ?? ''),
+      label: menu.menuName,
+      path: menu.path || '',
+      icon: menu.icon || 'LayoutDashboard',
+      parentId: menu.parentId,
+      permission: menu.menuCode,
+      children: menu.children?.map(mapMenuToItem),
+    });
+
+    return res.data.map(mapMenuToItem);
   },
   saveMenuItem: async (item: Partial<MenuItem>) => {
-    await delay(500);
-    if (item.id) {
-      _menu = _menu.map((m) => (m.id === item.id ? ({ ...m, ...item } as MenuItem) : m));
-    } else {
-      const newItem = {
-        ...item,
-        id: `M-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-      } as MenuItem;
-      _menu = [..._menu, newItem];
-    }
+    const isUpdate = !!item.id;
+    const endpoint = isUpdate ? '/admin/menu/update' : '/admin/menu/add';
+
+    // Map MenuItem back to Menu for backend
+    const payload = {
+      id: item.id,
+      menuName: item.label,
+      path: item.path,
+      icon: item.icon,
+      parentId: item.parentId,
+      menuCode: item.permission,
+    };
+
+    await httpClient.post<ApiResponse<void>>(endpoint, payload);
     return true;
   },
   deleteMenuItem: async (id: string) => {
-    await delay(400);
-    _menu = _menu.filter((m) => m.id !== id);
+    await httpClient.post<ApiResponse<void>>(`/admin/menu/delete?id=${id}`);
     return true;
   },
 
@@ -371,6 +402,22 @@ export const api = {
     await httpClient.post<ApiResponse<void>>(
       `/admin/customer/status?customerNo=${customerNo}&status=${status}`,
     );
+    return true;
+  },
+
+  // --- Permission Management ---
+  getPermissions: async () => {
+    const res = await httpClient.get<ApiResponse<Permission[]>>('/admin/permission/list');
+    return res.data || [];
+  },
+  savePermission: async (permission: Partial<Permission>) => {
+    const isUpdate = !!permission.id;
+    const endpoint = isUpdate ? '/admin/permission/update' : '/admin/permission/create';
+    await httpClient.post<ApiResponse<void>>(endpoint, permission);
+    return true;
+  },
+  deletePermission: async (id: string) => {
+    await httpClient.delete<ApiResponse<void>>(`/admin/permission/delete/${id}`);
     return true;
   },
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Fingerprint, Mail, Shield, Activity, Lock, Phone } from 'lucide-react';
+import { Fingerprint, Mail, Shield, Activity, Lock, Phone, User as UserIcon } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import TacticalSelect from '../../../components/TacticalSelect';
 import { User, UserRole, Role } from '../../../types';
@@ -70,6 +70,22 @@ const UserModal: React.FC<UserModalProps> = ({
           </div>
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
+              <UserIcon className="h-3.5 w-3.5" /> {t('nickname')}
+            </label>
+            <input
+              disabled={isSaving}
+              type="text"
+              value={formData.nickname || ''}
+              onChange={(e) => setFormData((p) => ({ ...p, nickname: e.target.value }))}
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
+              placeholder="Nickname"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
               <Mail className="h-3.5 w-3.5" /> {t('email')}
             </label>
             <input
@@ -82,9 +98,6 @@ const UserModal: React.FC<UserModalProps> = ({
               placeholder="contact@cloudgo.net"
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
               <Phone className="h-3.5 w-3.5" /> {t('phoneNumber')}
@@ -98,25 +111,6 @@ const UserModal: React.FC<UserModalProps> = ({
               placeholder="138-0000-0000"
             />
           </div>
-          {!editingUser && (
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
-                <Lock className="h-3.5 w-3.5" /> {t('password')}
-              </label>
-              <input
-                required
-                disabled={isSaving}
-                type="password"
-                value={(formData as Partial<User & { password?: string }>).password || ''}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, password: e.target.value }) as Partial<User>)
-                }
-                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
-                placeholder="••••••••"
-                minLength={6}
-              />
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -155,6 +149,26 @@ const UserModal: React.FC<UserModalProps> = ({
             </div>
           </div>
         </div>
+
+        {!editingUser && (
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
+              <Lock className="h-3.5 w-3.5" /> {t('password')}
+            </label>
+            <input
+              required
+              disabled={isSaving}
+              type="password"
+              value={(formData as Partial<User & { password?: string }>).password || ''}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, password: e.target.value }) as Partial<User>)
+              }
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
+              placeholder="••••••••"
+              minLength={6}
+            />
+          </div>
+        )}
       </form>
     </Modal>
   );

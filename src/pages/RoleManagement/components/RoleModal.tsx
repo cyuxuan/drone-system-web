@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shield, FileText, LayoutGrid, CheckSquare, Square } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { Role } from '../../../types';
+import { Role, Permission } from '../../../types';
 import { useAppContext } from '../../../context';
 
 interface RoleModalProps {
@@ -12,48 +12,8 @@ interface RoleModalProps {
   setFormData: React.Dispatch<React.SetStateAction<Partial<Role>>>;
   onSave: (e: React.FormEvent) => Promise<void>;
   isSaving?: boolean;
+  allPermissions: Permission[];
 }
-
-const PERMISSION_CATEGORIES = [
-  {
-    id: 'personnel',
-    labelKey: 'personnel',
-    permissions: [
-      { id: 'users.view', labelKey: 'users.view' },
-      { id: 'users.edit', labelKey: 'users.edit' },
-      { id: 'users.delete', labelKey: 'users.delete' },
-      { id: 'roles.manage', labelKey: 'roles.manage' },
-    ],
-  },
-  {
-    id: 'fleet',
-    labelKey: 'fleet',
-    permissions: [
-      { id: 'orders.view', labelKey: 'orders.view' },
-      { id: 'orders.edit', labelKey: 'orders.edit' },
-      { id: 'orders.execute', labelKey: 'orders.execute' },
-      { id: 'telemetry.live', labelKey: 'telemetry.live' },
-    ],
-  },
-  {
-    id: 'logistics',
-    labelKey: 'logistics',
-    permissions: [
-      { id: 'projects.view', labelKey: 'projects.view' },
-      { id: 'projects.edit', labelKey: 'projects.edit' },
-      { id: 'projects.pricing', labelKey: 'projects.pricing' },
-    ],
-  },
-  {
-    id: 'security',
-    labelKey: 'security',
-    permissions: [
-      { id: 'system.logs', labelKey: 'system.logs' },
-      { id: 'system.settings', labelKey: 'system.settings' },
-      { id: 'system.debug', labelKey: 'system.debug' },
-    ],
-  },
-];
 
 const RoleModal: React.FC<RoleModalProps> = ({
   isOpen,
@@ -63,8 +23,33 @@ const RoleModal: React.FC<RoleModalProps> = ({
   setFormData,
   onSave,
   isSaving = false,
+  allPermissions,
 }) => {
   const { t } = useAppContext();
+
+  // Group permissions by module
+  const permissionCategories = React.useMemo(() => {
+    const groups: Record<string, Permission[]> = {};
+    allPermissions.forEach((perm) => {
+      const module = perm.module || 'other';
+      if (!groups[module]) groups[module] = [];
+      groups[module].push(perm);
+    });
+
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([module, permissions]) => ({
+        id: module,
+        labelKey: module,
+        permissions: permissions
+          .sort((a, b) => a.permissionName.localeCompare(b.permissionName))
+          .map((p) => ({
+            id: p.permissionCode,
+            labelKey: p.permissionName,
+            description: p.description,
+          })),
+      }));
+  }, [allPermissions]);
 
   const togglePermission = (permId: string) => {
     const currentPerms = formData.permissions || [];
@@ -88,7 +73,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
   };
 
   const handleSelectAll = () => {
-    const allPerms = PERMISSION_CATEGORIES.flatMap((c) => c.permissions.map((p) => p.id));
+    const allPerms = permissionCategories.flatMap((c) => c.permissions.map((p) => p.id));
     setFormData((p) => ({ ...p, permissions: allPerms }));
   };
 
@@ -169,7 +154,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {PERMISSION_CATEGORIES.map((category) => {
+            {permissionCategories.map((category) => {
               const categoryPermIds = category.permissions.map((p) => p.id);
               const allSelected = categoryPermIds.every((id) =>
                 (formData.permissions || []).includes(id),
@@ -182,7 +167,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
                 >
                   <div className="bg-brand-500/5 border-brand-500/10 flex items-center justify-between border-b px-5 py-3">
                     <span className="text-brand-600 dark:text-brand-400 text-[10px] font-black tracking-widest uppercase">
-                      {t(category.labelKey)}
+                      {category.labelKey === 'other' ? t('otherPermissions') : t(category.labelKey)}
                     </span>
                     <button
                       type="button"
@@ -201,6 +186,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
                           key={perm.id}
                           type="button"
                           disabled={isSaving}
+                          title={perm.description}
                           onClick={() => togglePermission(perm.id)}
                           className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                             isSelected
@@ -213,9 +199,16 @@ const RoleModal: React.FC<RoleModalProps> = ({
                           ) : (
                             <Square className="h-4 w-4 shrink-0" />
                           )}
-                          <span className="text-[10px] font-black tracking-wider uppercase">
-                            {t(perm.labelKey)}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black tracking-wider uppercase">
+                              {t(perm.labelKey)}
+                            </span>
+                            {perm.description && (
+                              <span className="text-[8px] font-medium opacity-60">
+                                {perm.description}
+                              </span>
+                            )}
+                          </div>
                         </button>
                       );
                     })}

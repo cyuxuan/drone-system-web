@@ -259,73 +259,19 @@ const MenuModal: React.FC<MenuModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-          {/* Parent ID */}
+          {/* Permission / Menu Code */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
-              <Plus className="h-3.5 w-3.5" /> {t('structureTree')}
+              <Shield className="h-3.5 w-3.5" /> {t('permission')}
             </label>
-            <div className="relative">
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={() => setIsParentPickerOpen(!isParentPickerOpen)}
-                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
-              >
-                <div className="bg-brand-500/10 text-brand-500 flex h-6 w-6 items-center justify-center rounded">
-                  <Layout className="h-3.5 w-3.5" />
-                </div>
-                <span className="text-sm">{getSelectedParentLabel()}</span>
-                <ChevronDown
-                  className={`ml-auto h-4 w-4 text-slate-400 transition-transform duration-300 ${
-                    isParentPickerOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isParentPickerOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setIsParentPickerOpen(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="glass-hud absolute top-full right-0 left-0 z-20 mt-2 max-h-80 overflow-hidden rounded-2xl border border-white/10 p-4 shadow-2xl"
-                    >
-                      <div className="scrollbar-hide max-h-64 overflow-y-auto p-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData({ ...formData, parentId: undefined });
-                            setIsParentPickerOpen(false);
-                          }}
-                          className={`group mb-2 flex w-full items-center gap-2 rounded-xl p-2 text-left transition-all ${
-                            !formData.parentId
-                              ? 'bg-brand-500/10 text-brand-500 shadow-sm'
-                              : 'hover:text-brand-500 hover:bg-brand-500/5 text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          <div
-                            className={`flex h-6 w-6 items-center justify-center rounded-lg ${
-                              !formData.parentId
-                                ? 'bg-brand-500 text-white'
-                                : 'bg-slate-500/10 text-slate-400'
-                            }`}
-                          >
-                            <Layout className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="text-xs font-bold tracking-tight">{t('all')}</span>
-                        </button>
-                        <div className="mt-2 space-y-1">{renderParentTree(menus)}</div>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
+            <input
+              type="text"
+              disabled={isSaving}
+              value={formData.permission || ''}
+              onChange={(e) => setFormData({ ...formData, permission: e.target.value })}
+              className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
+              placeholder="system:user:list"
+            />
           </div>
 
           {/* Icon Picker */}
@@ -409,6 +355,77 @@ const MenuModal: React.FC<MenuModalProps> = ({
                             {renderIcon(name, 'h-5 w-5')}
                           </button>
                         ))}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          {/* Parent ID */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-slate-400">
+              <Plus className="h-3.5 w-3.5" /> {t('structureTree')}
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => setIsParentPickerOpen(!isParentPickerOpen)}
+                className="bg-brand-500/5 border-brand-500/20 focus:border-brand-500 flex w-full items-center gap-3 rounded-2xl border-b-2 px-6 py-4 text-sm font-black tracking-tight transition-all outline-none disabled:opacity-50 dark:bg-slate-900 dark:text-white"
+              >
+                <div className="bg-brand-500/10 text-brand-500 flex h-6 w-6 items-center justify-center rounded">
+                  <Layout className="h-3.5 w-3.5" />
+                </div>
+                <span className="text-sm">{getSelectedParentLabel()}</span>
+                <ChevronDown
+                  className={`ml-auto h-4 w-4 text-slate-400 transition-transform duration-300 ${
+                    isParentPickerOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {isParentPickerOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsParentPickerOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="glass-hud absolute top-full right-0 left-0 z-20 mt-2 max-h-80 overflow-hidden rounded-2xl border border-white/10 p-4 shadow-2xl"
+                    >
+                      <div className="scrollbar-hide max-h-64 overflow-y-auto p-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, parentId: undefined });
+                            setIsParentPickerOpen(false);
+                          }}
+                          className={`group mb-2 flex w-full items-center gap-2 rounded-xl p-2 text-left transition-all ${
+                            !formData.parentId
+                              ? 'bg-brand-500/10 text-brand-500 shadow-sm'
+                              : 'hover:text-brand-500 hover:bg-brand-500/5 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <div
+                            className={`flex h-6 w-6 items-center justify-center rounded-lg ${
+                              !formData.parentId
+                                ? 'bg-brand-500 text-white'
+                                : 'bg-slate-500/10 text-slate-400'
+                            }`}
+                          >
+                            <Layout className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-xs font-bold tracking-tight">{t('all')}</span>
+                        </button>
+                        <div className="mt-2 space-y-1">{renderParentTree(menus)}</div>
                       </div>
                     </motion.div>
                   </>

@@ -4,15 +4,18 @@ import { Search, UserPlus, Fingerprint, Zap, UserCheck, UserMinus, Trash2 } from
 import { api } from '../../services/api';
 import { User, UserRole, Role } from '../../types';
 import { useAppContext } from '../../context';
+import { useAuth } from '../../context/AuthContext';
 import { getErrorType, ErrorType } from '../../utils/error';
 import UserModal from './components/UserModal';
 import BulkActionHub from '../../components/BulkActionHub';
 import UserTable from './components/UserTable';
+import HasPermission from '../../components/HasPermission';
 
 const PAGE_SIZE = 10;
 
 const UserManagement = () => {
   const { t, showMessage, confirm } = useAppContext();
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -237,14 +240,16 @@ const UserManagement = () => {
               className="input-tactical-small w-full rounded-2xl py-3 pr-4 pl-10 text-xs font-black tracking-widest text-slate-900 outline-none dark:text-white"
             />
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleOpenAdd}
-            className="btn-jade flex shrink-0 items-center gap-3 rounded-2xl px-8 py-3 text-[10px] font-black tracking-[0.2em] uppercase shadow-lg"
-          >
-            <UserPlus className="h-4 w-4" /> {t('addUser')}
-          </motion.button>
+          <HasPermission permission="system:user:add">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleOpenAdd}
+              className="btn-jade flex shrink-0 items-center gap-3 rounded-2xl px-8 py-3 text-[10px] font-black tracking-[0.2em] uppercase shadow-lg"
+            >
+              <UserPlus className="h-4 w-4" /> {t('addUser')}
+            </motion.button>
+          </HasPermission>
         </div>
       </div>
 
@@ -275,30 +280,40 @@ const UserManagement = () => {
       </div>
 
       {/* Optimized Horizontal Command Hub (Bottom-Right) */}
-      <BulkActionHub
-        selectedCount={selectedIds.length}
-        onClear={() => setSelectedIds([])}
-        actions={[
-          {
-            label: t('bulkActivate'),
-            icon: UserCheck,
-            onClick: () => handleBulkStatusChange(0),
-            variant: 'success',
-          },
-          {
-            label: t('bulkDeactivate'),
-            icon: UserMinus,
-            onClick: () => handleBulkStatusChange(1),
-            variant: 'warning',
-          },
-          {
-            label: t('cancelProtocols'),
-            icon: Trash2,
-            onClick: handleBulkDelete,
-            variant: 'danger',
-          },
-        ]}
-      />
+      {(hasPermission('system:user:delete') || hasPermission('system:user:edit')) && (
+        <BulkActionHub
+          selectedCount={selectedIds.length}
+          onClear={() => setSelectedIds([])}
+          actions={[
+            ...(hasPermission('system:user:edit')
+              ? [
+                  {
+                    label: t('bulkActivate'),
+                    icon: UserCheck,
+                    onClick: () => handleBulkStatusChange(0),
+                    variant: 'success' as const,
+                  },
+                  {
+                    label: t('bulkDeactivate'),
+                    icon: UserMinus,
+                    onClick: () => handleBulkStatusChange(1),
+                    variant: 'warning' as const,
+                  },
+                ]
+              : []),
+            ...(hasPermission('system:user:delete')
+              ? [
+                  {
+                    label: t('cancelProtocols'),
+                    icon: Trash2,
+                    onClick: handleBulkDelete,
+                    variant: 'danger' as const,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      )}
 
       {/* Add / Edit Modal */}
       <UserModal
